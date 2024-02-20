@@ -1,0 +1,14 @@
+{
+    "detectors_to_exclude": "",
+    "exclude_informational": false,
+    "exclude_low": false,
+    "exclude_medium": false,
+    "exclude_high": false,
+    "solc_remaps": [
+        "forge-std/=lib/forge-std/src/",
+        "@openzeppelin/=lib/openzeppelin-contracts/",
+        "@solmate/=lib/solmate/src/",
+        "@gelato/=lib/automate/contracts/",
+        "@balancer-labs/=lib/balancer-v2-monorepo/pkg/"
+    ]
+}
