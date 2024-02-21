@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.24;
+pragma solidity 0.8.23;
 
 // ==============================================================
 // _______                   __________________       ________             _____                  ______
@@ -9,7 +9,7 @@ pragma solidity 0.8.24;
 // /_/  |_/_/ /_/ /_/_  .___//_/  /_/  /_/    _\__, / /_/     /_/    \____/\__/ \____/\___/ \____//_/   
 //                   /_/                      /____/                                                    
 // ==============================================================
-// ========================== Option ============================
+// ===================== DiscountedAmplify ======================
 // ==============================================================
 // Amplify Protocol: https://github.com/AmplifyProtocol
 
@@ -24,12 +24,12 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IFlashLoanHandler} from "./utilities/interfaces/IFlashLoanHandler.sol";
 import {IPriceOracle} from "./utilities/interfaces/IPriceOracle.sol";
 
-import {IOption, IERC20Metadata} from "./interfaces/IOption.sol";
+import {IDiscountedAmplify, IERC20Metadata} from "./interfaces/IDiscountedAmplify.sol";
 
-/// @title Option
+/// @title Discounted Amplify
 /// @author johnnyonline
-/// @notice Creates and manages options
-contract Option is IOption, Auth, ERC721, ReentrancyGuard {
+/// @notice Creates and manages dAMPL NFTs, which are ITM Call Options, enabling holders to buy AMPL at a discount to market price
+contract DiscountedAmplify is IDiscountedAmplify, Auth, ERC721, ReentrancyGuard {
 
     using SafeERC20 for IERC20Metadata;
 
@@ -110,7 +110,7 @@ contract Option is IOption, Auth, ERC721, ReentrancyGuard {
     // External View Functions
     // ============================================================================================
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function amountToPay(uint256 _id) public view returns (uint256 _amountToPay) {
         uint256 _decimals = DECIMALS;
         Option memory _option = options[_id];
@@ -118,32 +118,32 @@ contract Option is IOption, Auth, ERC721, ReentrancyGuard {
         _amountToPay = usd.decimals() == _decimals ? _amountToPay : _amountToPay / 10 ** (_decimals - usd.decimals());
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function strike(uint256 _id) external view returns (uint256) {
         return options[_id].strike;
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function amount(uint256 _id) external view returns (uint256) {
         return options[_id].amount;
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function expiry(uint256 _id) external view returns (uint256) {
         return options[_id].expiry;
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function price() external view returns (uint256) {
         return _getPrice();
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function exercised(uint256 _id) external view returns (bool) {
         return options[_id].exercised;
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function payWith() external view returns (address) {
         return address(usd);
     }
@@ -152,14 +152,14 @@ contract Option is IOption, Auth, ERC721, ReentrancyGuard {
     // External Mutated Functions
     // ============================================================================================
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function addRewards(uint256 _amount, address _gauge) external nonReentrant onlyMinter {
         rewards[_gauge] += _amount;
 
         emit AddRewards(_amount, _gauge);
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function mint(uint256 _amount, address _receiver) external nonReentrant onlyScoreGauge returns (uint256) {
         rewards[msg.sender] -= _amount;
 
@@ -177,7 +177,7 @@ contract Option is IOption, Auth, ERC721, ReentrancyGuard {
         return id;
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function exercise(uint256 _id, address _receiver, bool _useFlashLoan) external {
         if (_requireOwned(_id) != msg.sender) revert NotOwner();
 
@@ -201,7 +201,7 @@ contract Option is IOption, Auth, ERC721, ReentrancyGuard {
         emit Exercise(_option.amount, _option.strike, _id, _receiver, msg.sender);
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function refund(uint256[] memory _ids) external returns (uint256 _amount) {
         for (uint256 i = 0; i < _ids.length; i++) {
             Option storage _option = options[_ids[i]];
@@ -222,7 +222,7 @@ contract Option is IOption, Auth, ERC721, ReentrancyGuard {
 
     // Owner
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function setMinter(address _minter) external requiresAuth {
         if (minter != address(0)) revert MinterAlreadySet();
 
@@ -231,21 +231,21 @@ contract Option is IOption, Auth, ERC721, ReentrancyGuard {
         emit SetMinter(_minter);
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function setScoreGauge(address _scoreGauge, bool _isScoreGauge) external requiresAuth {
         isScoreGauge[_scoreGauge] = _isScoreGauge;
 
         emit SetScoreGauge(_scoreGauge, _isScoreGauge);
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function setUSD(IERC20Metadata _usd) external requiresAuth {
         usd = _usd;
 
         emit SetUSD(_usd);
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function setDiscount(uint256 _discount) external requiresAuth {
         if (_discount > BASE) revert InvalidDiscount();
 
@@ -254,21 +254,21 @@ contract Option is IOption, Auth, ERC721, ReentrancyGuard {
         emit SetDiscount(_discount);
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function setTreasury(address _treasury) external requiresAuth {
         treasury = _treasury;
 
         emit SetTreasury(_treasury);
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function setPriceOracle(address _priceOracle) external requiresAuth {
         priceOracle = IPriceOracle(_priceOracle);
 
         emit SetPriceOracle(_priceOracle);
     }
 
-    /// @inheritdoc IOption
+    /// @inheritdoc IDiscountedAmplify
     function setFlashLoanHandler(address _flashLoanHandler) external requiresAuth {
         flashLoanHandler = IFlashLoanHandler(_flashLoanHandler);
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.24;
+pragma solidity 0.8.23;
 
 // ==============================================================
 // _______                   __________________       ________             _____                  ______
@@ -19,7 +19,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 import {IMinter} from "./interfaces/IMinter.sol";
 import {IAmplify} from "./interfaces/IAmplify.sol";
-import {IOption} from "./interfaces/IOption.sol";
+import {IDiscountedAmplify} from "./interfaces/IDiscountedAmplify.sol";
 import {IScoreGauge} from "./interfaces/IScoreGauge.sol";
 import {IGaugeController} from "./interfaces/IGaugeController.sol";
 
@@ -32,7 +32,7 @@ contract Minter is ReentrancyGuard, IMinter {
     mapping(uint256 => mapping(address => bool)) public minted; // epoch -> gauge -> hasMinted
 
     IAmplify public immutable token;
-    IOption public immutable option;
+    IDiscountedAmplify public immutable dToken;
 
     IGaugeController private immutable _controller;
 
@@ -40,9 +40,9 @@ contract Minter is ReentrancyGuard, IMinter {
     // Constructor
     // ============================================================================================
 
-    constructor(IAmplify _token, IOption _option, IGaugeController __controller) {
+    constructor(IAmplify _token, IDiscountedAmplify _dToken, IGaugeController __controller) {
         token = _token;
-        option = _option;
+        dToken = _dToken;
         _controller = __controller;
     }
 
@@ -93,8 +93,8 @@ contract Minter is ReentrancyGuard, IMinter {
         if (_mintForGauge > 0) {
             minted[_epoch][_gauge] = true;
 
-            token.mint(address(option), _mintForGauge);
-            option.addRewards(_mintForGauge, _gauge);
+            token.mint(address(dToken), _mintForGauge);
+            dToken.addRewards(_mintForGauge, _gauge);
 
             IScoreGauge(_gauge).addRewards(_epoch, _mintForGauge);
 

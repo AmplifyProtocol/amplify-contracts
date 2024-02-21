@@ -7,9 +7,9 @@
 [submodule "lib/solmate"]
 	path = lib/solmate
 	url = https://github.com/transmissions11/solmate
-[submodule "lib/automate"]
-	path = lib/automate
-	url = https://github.com/gelatodigital/automate
 [submodule "lib/balancer-v2-monorepo"]
 	path = lib/balancer-v2-monorepo
 	url = https://github.com/balancer/balancer-v2-monorepo
+[submodule "lib/automate.git"]
+	path = lib/automate.git
+	url = https://github.com/gelatodigital/automate.git

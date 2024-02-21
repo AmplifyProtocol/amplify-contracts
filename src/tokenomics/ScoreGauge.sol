@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.24;
+pragma solidity 0.8.23;
 
 // ==============================================================
 // _______                   __________________       ________             _____                  ______
@@ -26,7 +26,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {CommonHelper, OrchestratorHelper, IDataStore} from "../integrations/libraries/OrchestratorHelper.sol";
 
 import {IMinter} from "./interfaces/IMinter.sol";
-import {IOption} from "./interfaces/IOption.sol";
+import {IDiscountedAmplify} from "./interfaces/IDiscountedAmplify.sol";
 import {IVotingEscrow} from "./interfaces/IVotingEscrow.sol";
 import {IGaugeController} from "./interfaces/IGaugeController.sol";
 import {IScoreGauge} from "./interfaces/IScoreGauge.sol";
@@ -49,7 +49,7 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
 
     IERC20 public immutable token;
     IMinter public immutable minter;
-    IOption public immutable option;
+    IDiscountedAmplify public immutable dToken;
     IDataStore public immutable dataStore;
     IVotingEscrow public immutable votingEscrow;
     IGaugeController public immutable controller;
@@ -63,20 +63,20 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
     /// @param _votingEscrow The VotingEscrow contract address
     /// @param _minter The Minter contract address
     /// @param _dataStore The DataStore contract address
-    /// @param _option The Option contract address
+    /// @param _dToken The dAMPL contract address
     /// @param _token The Amplify token contract address
     constructor(
         Authority _authority,
         IVotingEscrow _votingEscrow,
         IMinter _minter,
         IDataStore _dataStore,
-        IOption _option,
+        IDiscountedAmplify _dToken,
         IERC20 _token
     ) Auth(address(0), _authority) {
         votingEscrow = _votingEscrow;
         minter = _minter;
         dataStore = _dataStore;
-        option = _option;
+        dToken = _dToken;
 
         token = _token;
 
@@ -123,7 +123,7 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
 
     /// @inheritdoc IERC721Receiver
     function onERC721Received(address, address, uint256, bytes calldata) external view returns (bytes4) {
-        if (msg.sender != address(option)) revert NotOption();
+        if (msg.sender != address(dToken)) revert NotOption();
 
         return this.onERC721Received.selector;
     }
@@ -284,7 +284,7 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
 
         _epochInfo.claimed[msg.sender] = true;
 
-        _id = option.mint(_rewards, _receiver);
+        _id = dToken.mint(_rewards, _receiver);
 
         emit Claim(_epoch, _rewards, msg.sender, _receiver);
     }
@@ -317,14 +317,15 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
     ) internal returns (uint256 _rewards, uint256 _id) {
         (_rewards, _id) = _claim(_epoch, address(this));
 
+        IDiscountedAmplify _dToken = dToken;
         if (!_useFlashLoan) {
-            uint256 _amountToPay = option.amountToPay(_id);
-            IERC20 _usd = IERC20(option.payWith());
+            uint256 _amountToPay = _dToken.amountToPay(_id);
+            IERC20 _usd = IERC20(_dToken.payWith());
             _usd.safeTransferFrom(msg.sender, address(this), _amountToPay);
-            _usd.forceApprove(address(option), _amountToPay);
+            _usd.forceApprove(address(_dToken), _amountToPay);
         }
 
-        option.exercise(_id, _receiver, _useFlashLoan);
+        _dToken.exercise(_id, _receiver, _useFlashLoan);
     }
 
     function _lock(uint256 _tokenAmount, uint256 _unlockTime) internal {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.24;
+pragma solidity 0.8.23;
 
 // ==============================================================
 // _______                   __________________       ________             _____                  ______
@@ -90,7 +90,7 @@ contract VotingEscrow is IVotingEscrow {
     }
 
     function name() external pure returns (string memory) {
-        return "Vote-escrowed AMPL";
+        return "Vote-escrowed Amplify";
     }
 
     function symbol() external pure returns (string memory) {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.24;
+pragma solidity 0.8.23;
 
 // ==============================================================
 // _______                   __________________       ________             _____                  ______
@@ -43,8 +43,8 @@ contract DecreaseSizeResolver is AutomateTaskCreator, Auth {
     // Constructor
     // ============================================================================================
 
-    constructor(Authority _authority, IDataStore _dataStore, address _automate, address _fundsOwner)
-        AutomateTaskCreator(_automate, _fundsOwner) Auth(address(0), _authority)
+    constructor(Authority _authority, IDataStore _dataStore, address _automate)
+        AutomateTaskCreator(_automate) Auth(address(0), _authority)
     {
         dataStore = _dataStore;
 
@@ -119,10 +119,10 @@ contract DecreaseSizeResolver is AutomateTaskCreator, Auth {
     // Mutated Functions
     // ============================================================================================
 
-    function depositFunds(uint256 _amount, address _token) external payable {
+    function depositFunds(uint256 _amount, address _token, address _sponsor) external payable {
         if (_token == ETH && msg.value != _amount) revert WrongAmount();
 
-        _depositFunds(_amount, _token);
+        _depositFunds1Balance(_amount, _token, _sponsor);
     }
 
     // ============================================================================================

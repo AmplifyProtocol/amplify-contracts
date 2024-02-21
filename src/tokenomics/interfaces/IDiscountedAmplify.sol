@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.24;
+pragma solidity 0.8.23;
 
 // ==============================================================
 // _______                   __________________       ________             _____                  ______
@@ -9,7 +9,7 @@ pragma solidity 0.8.24;
 // /_/  |_/_/ /_/ /_/_  .___//_/  /_/  /_/    _\__, / /_/     /_/    \____/\__/ \____/\___/ \____//_/   
 //                   /_/                      /____/                                                    
 // ==============================================================
-// ========================== IOption ===========================
+// ==================== IDiscountedAmplify ======================
 // ==============================================================
 // Amplify Protocol: https://github.com/AmplifyProtocol
 
@@ -17,7 +17,7 @@ pragma solidity 0.8.24;
 
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-interface IOption {
+interface IDiscountedAmplify {
 
     struct Option {
         uint256 amount;
