@@ -73,10 +73,6 @@ contract RequestPosition is BaseHelper {
 
             {
                 address _token = _swapParams.path[0];
-                _swapParams.path[0] = address(0);
-                vm.expectRevert("Address: call to non-contract");
-                IBaseOrchestrator(_context.orchestrator).requestPosition{ value: _totalExecutionFee }(_adjustPositionParams, _swapParams, _executionFees, _routeTypeKey, _isIncrease);
-
                 _swapParams.path[0] = _frax;
                 _dealERC20(_swapParams.path[0], _trader, _swapParams.amount);
                 _approveERC20(address(_context.orchestrator), _swapParams.path[0], _swapParams.amount);

@@ -8,7 +8,7 @@ contract GMXV2PuppetWithdrawFuzz is BaseGMXV2 {
     function setUp() public override {
         BaseGMXV2.setUp();
 
-        uint256 _amount = 1 ether;
+        uint256 _amount = 100_000 * 1e6; // usdc has 6 decimals
         address _user = context.users.alice;
 
         _dealERC20(context.usdc, _user, _amount);

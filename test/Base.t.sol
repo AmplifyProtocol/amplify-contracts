@@ -167,10 +167,11 @@ abstract contract Base is Test, DeployerUtilities {
         address payable _user = payable(makeAddr(_name));
         vm.deal({ account: _user, newBalance: 100 ether });
         deal({ token: address(_wnt), to: _user, give: 1_000_000 * 10 ** IERC20Metadata(_wnt).decimals() });
-        // deal({ token: address(_usdcOld), to: _user, give: 1_000_000 * 10 ** IERC20Metadata(_usdcOld).decimals() });
         deal({ token: address(_usdc), to: _user, give: 1_000_000 * 10 ** IERC20Metadata(_usdc).decimals() });
         deal({ token: address(_frax), to: _user, give: 1_000_000 * 10 ** IERC20Metadata(_frax).decimals() });
-        return _user; // todo - problem here?
+        // deal({ token: address(_usdcOld), to: _user, give: 1_000_000 * 10 ** IERC20Metadata(_usdcOld).decimals() });
+        _dealNonDealableERC20(_usdcOld, _user, 1_000_000 * 10 ** IERC20Metadata(_usdcOld).decimals());
+        return _user;
     }
 
     function _depositFundsToGelato1Balance() internal {
@@ -194,7 +195,18 @@ abstract contract Base is Test, DeployerUtilities {
     }
 
     function _dealERC20(address _token, address _user, uint256 _amount) internal {
-        _amount = IERC20(_token).balanceOf(_user) + (_amount * 10 ** IERC20Metadata(_token).decimals());
-        deal({ token: _token, to: _user, give: _amount });
+        if (_token == _usdcOld) {
+            _dealNonDealableERC20(_token, _user, _amount);
+        } else {
+            _amount = IERC20(_token).balanceOf(_user) + (_amount * 10 ** IERC20Metadata(_token).decimals());
+            deal({ token: _token, to: _user, give: _amount });
+        }
+    }
+
+    function _dealNonDealableERC20(address _token, address _user, uint256 _amount) internal {
+        address _whale = 0xB38e8c17e38363aF6EbdCb3dAE12e0243582891D; // Binance Hot Wallet
+        if (IERC20(_token).balanceOf(_whale) < _amount) revert ("dealNonDealableERC20: Whale balance is less than amount");
+        vm.prank(_whale);
+        IERC20(_token).transfer(_user, _amount);
     }
 }

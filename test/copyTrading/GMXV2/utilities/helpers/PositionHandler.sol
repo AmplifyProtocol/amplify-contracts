@@ -386,9 +386,9 @@ contract PositionHandler is BaseHelper {
         address _collateralToken = IDataStore(_context.dataStore).getAddress(Keys.routeCollateralTokenKey(_route));
         if (!_context.expectations.isExpectingNonZeroBalance && !_context.expectations.isExpectingPerformanceFee) require(IERC20(_collateralToken).balanceOf(_route) == 0, "PositionHandler: E1");
         if (_isIncrease && !_context.expectations.isSuccessfulExecution) { // unsuccessful increase
-            deal({ token: _collateralToken, to: _route, give: 100_000 * 10 ** IERC20Metadata(_collateralToken).decimals() });
+            _dealERC20(_collateralToken, _route, 100_000 * 10 ** IERC20Metadata(_collateralToken).decimals());
         } else if (!_isIncrease && _context.expectations.isSuccessfulExecution) { // successful decrease
-            deal({ token: _collateralToken, to: _route, give: 100_000 * 10 ** IERC20Metadata(_collateralToken).decimals() });
+            _dealERC20(_collateralToken, _route, 100_000 * 10 ** IERC20Metadata(_collateralToken).decimals());
         }
 
         vm.startPrank(GMXV2RouteHelper.gmxCallBackCaller(_context.dataStore));
