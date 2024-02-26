@@ -1,15 +1,15 @@
-// // SPDX-License-Identifier: AGPL-3.0-only
-// pragma solidity 0.8.23;
+// SPDX-License-Identifier: AGPL-3.0-only
+pragma solidity 0.8.23;
 
-// import "../../BaseGMXV1.t.sol";
+import "../../BaseGMXV1.t.sol";
 
-// contract GMXV1Withdraw is BaseGMXV1 {
+contract GMXV1Withdraw is BaseGMXV1 {
 
-//     function setUp() public override {
-//         BaseGMXV1.setUp();
-//     }
+    function setUp() public override {
+        BaseGMXV1.setUp();
+    }
 
-//     function testWithdrawNoFeesFlow() external {
-//         _withdraw.withdrawFlowTest(context, _deposit);
-//     }
-// }
+    function testWithdrawNoFeesFlow() external {
+        _withdraw.withdrawFlowTest(context, _deposit);
+    }
+}
