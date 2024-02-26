@@ -13,8 +13,8 @@ contract DeployerUtilities is Script {
     // ============================================================================================
 
     // deployer
-    uint256 internal _deployerPrivateKey = vm.envUint("GBC_DEPLOYER_PRIVATE_KEY");
-    address internal _deployer = vm.envAddress("GBC_DEPLOYER_ADDRESS");
+    uint256 internal _deployerPrivateKey = vm.envUint("AMPL_DEPLOYER_PRIVATE_KEY");
+    address internal _deployer = vm.envAddress("AMPL_DEPLOYER_ADDRESS");
 
     // GMXV1
     address internal _gmxV1Router = 0xaBBc5F99639c9B6bCb58544ddf04EFA6802F4064;

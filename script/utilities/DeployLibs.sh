@@ -9,19 +9,6 @@ extract_deployed_address() {
     echo "$1" | grep "Deployed to:" | awk '{print $3}'
 }
 
-# # import {SharesHelper} from "../libraries/SharesHelper.sol";
-# --libraries "src/integrations/libraries/SharesHelper.sol:SharesHelper:$shares_helper_address"
-# # import {Keys} from "../libraries/Keys.sol";
-# --libraries "src/integrations/libraries/Keys.sol:Keys:$keys_address"
-# # import {CommonHelper} from "./CommonHelper.sol";
-# --libraries "src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address"
-# # route reader
-# --libraries "src/integrations/libraries/RouteReader.sol:RouteReader:$route_reader_address"
-# # gmxv2 keys
-# --libraries "src/integrations/GMXV2/libraries/GMXV2Keys.sol:GMXV2Keys:$gmxv2_keys_address"
-# # order utils
-# --libraries "src/integrations/GMXV2/libraries/OrderUtils.sol:OrderUtils:$gmxv2_order_utils_address"
-
 # Deploy contracts and extract addresses
 keys_address=$(extract_deployed_address "$(forge create --verify --legacy --private-key $PRIVATE_KEY --rpc-url $RPC_URL src/integrations/libraries/Keys.sol:Keys)")
 echo "deployed keys to $keys_address"
@@ -45,12 +32,12 @@ gmxv2_route_helper_address=$(extract_deployed_address "$(forge create --librarie
 echo "deployed gmxv2 route helper to $gmxv2_route_helper_address"
 
 # Verification
-forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.19+commit.7dd6d404 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --verifier-url https://api.arbiscan.io/api $common_helper_address src/integrations/libraries/CommonHelper.sol:CommonHelper
-forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.19+commit.7dd6d404 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --libraries src/integrations/libraries/SharesHelper.sol:SharesHelper:$shares_helper_address --verifier-url https://api.arbiscan.io/api $route_reader_address src/integrations/libraries/RouteReader.sol:RouteReader
-forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.19+commit.7dd6d404 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --libraries src/integrations/libraries/SharesHelper.sol:SharesHelper:$shares_helper_address --libraries src/integrations/libraries/RouteReader.sol:RouteReader:$route_reader_address --verifier-url https://api.arbiscan.io/api $route_setter_address src/integrations/libraries/RouteSetter.sol:RouteSetter
-forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.19+commit.7dd6d404 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --libraries src/integrations/libraries/SharesHelper.sol:SharesHelper:$shares_helper_address --libraries src/integrations/libraries/RouteReader.sol:RouteReader:$route_reader_address --verifier-url https://api.arbiscan.io/api $orchestrator_helper_address src/integrations/libraries/OrchestratorHelper.sol:OrchestratorHelper
-forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.19+commit.7dd6d404 --libraries src/integrations/GMXV2/libraries/GMXV2Keys.sol:GMXV2Keys:$gmxv2_keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --verifier-url https://api.arbiscan.io/api $gmxv2_orchestrator_helper_address src/integrations/GMXV2/libraries/GMXV2OrchestratorHelper.sol:GMXV2OrchestratorHelper
-forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.19+commit.7dd6d404 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --libraries src/integrations/GMXV2/libraries/GMXV2Keys.sol:GMXV2Keys:$gmxv2_keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --libraries src/integrations/GMXV2/libraries/OrderUtils.sol:OrderUtils:$gmxv2_order_utils_address --verifier-url https://api.arbiscan.io/api $gmxv2_route_helper_address src/integrations/GMXV2/libraries/GMXV2RouteHelper.sol:GMXV2RouteHelper
+forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.23+commit.f704f362 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --verifier-url https://api.arbiscan.io/api $common_helper_address src/integrations/libraries/CommonHelper.sol:CommonHelper
+forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.23+commit.f704f362 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --libraries src/integrations/libraries/SharesHelper.sol:SharesHelper:$shares_helper_address --verifier-url https://api.arbiscan.io/api $route_reader_address src/integrations/libraries/RouteReader.sol:RouteReader
+forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.23+commit.f704f362 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --libraries src/integrations/libraries/SharesHelper.sol:SharesHelper:$shares_helper_address --libraries src/integrations/libraries/RouteReader.sol:RouteReader:$route_reader_address --verifier-url https://api.arbiscan.io/api $route_setter_address src/integrations/libraries/RouteSetter.sol:RouteSetter
+forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.23+commit.f704f362 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --libraries src/integrations/libraries/SharesHelper.sol:SharesHelper:$shares_helper_address --libraries src/integrations/libraries/RouteReader.sol:RouteReader:$route_reader_address --verifier-url https://api.arbiscan.io/api $orchestrator_helper_address src/integrations/libraries/OrchestratorHelper.sol:OrchestratorHelper
+forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.23+commit.f704f362 --libraries src/integrations/GMXV2/libraries/GMXV2Keys.sol:GMXV2Keys:$gmxv2_keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --verifier-url https://api.arbiscan.io/api $gmxv2_orchestrator_helper_address src/integrations/GMXV2/libraries/GMXV2OrchestratorHelper.sol:GMXV2OrchestratorHelper
+forge verify-contract --watch --chain-id 42161 --compiler-version v0.8.23+commit.f704f362 --libraries src/integrations/libraries/Keys.sol:Keys:$keys_address --libraries src/integrations/GMXV2/libraries/GMXV2Keys.sol:GMXV2Keys:$gmxv2_keys_address --libraries src/integrations/libraries/CommonHelper.sol:CommonHelper:$common_helper_address --libraries src/integrations/GMXV2/libraries/OrderUtils.sol:OrderUtils:$gmxv2_order_utils_address --verifier-url https://api.arbiscan.io/api $gmxv2_route_helper_address src/integrations/GMXV2/libraries/GMXV2RouteHelper.sol:GMXV2RouteHelper
 
 # Print variables
 echo "Keys Address: $keys_address"
@@ -64,13 +51,13 @@ echo "GMXV2 Orchestrator Helper Address: $gmxv2_orchestrator_helper_address"
 echo "GMXV2 Order Utils Address: $gmxv2_order_utils_address"
 echo "GMXV2 Route Helper Address: $gmxv2_route_helper_address"
 
-# Keys Address: 0xa9A725FA649093e7ab5b368EcA0fd5D7703fA6c6
-# Shares Helper Address: 0x7B2D7d166Fd18449b90F8Af24cbfE6118ae2e10e
-# Common Helper Address: 0x20C1E1e86611eF39EbbBe4e011C17400Aa5C0351
-# Route Reader Address: 0x1A90e321D0D019383599936D45323C210dE5C12D
-# Route Setter Address: 0x56BDB07eB4492beB272531A7E46E9aEEc961A540
-# Orchestrator Helper Address: 0xE38CEAA21E5E0A3C0418DC0a520085a77231cCF5
-# GMXV2 Keys Address: 0xbC730fF81eD4E1e85485f0703e35C0448Bc60aE5
-# GMXV2 Orchestrator Helper Address: 0x5BAA0537c3B448aDFd53da5Bb0D23e552402B9EB
-# GMXV2 Order Utils Address: 0x52daBB11490Df14911e82adC525C278379f39980
-# GMXV2 Route Helper Address: 0x0f4a0d8fC9E499D876f6f7c2A8e4b8a1360B0c16
+# Keys Address: 0x2503e378fEE8da4a78eA0BE45e70DB286A069Ff8
+# Shares Helper Address: 0x5012b05F611f9498a3fC6A80013A9B6781F0bBBd
+# Common Helper Address: 0x67bf4c18ecF000328857030a131009e9c44929F0
+# Route Reader Address: 0xBA0a4ad8a635F3fE38EDbeAfdB53797a70D96DE9
+# Route Setter Address: 0x7dD08E239075A108b09b85671F6C8DaDFA740410
+# Orchestrator Helper Address: 0x98fe47970e7C401244EeC8af39A3668BC2143E9B
+# GMXV2 Keys Address: 0xfcFE1B3417d4d6F6E8a95E05d0243a09D5993A08
+# GMXV2 Orchestrator Helper Address: 0xC2EE029E0fCA5f905B4D8C839f27E47c3EB5519E
+# GMXV2 Order Utils Address: 0x812386c417b79A5e79F614F661a5984b70249861
+# GMXV2 Route Helper Address: 0x71256D7d96521Dd003A9299e233D254ca804d41a

@@ -142,9 +142,11 @@ contract CallbackAsserts is BaseHelper {
         bytes32 _routeKey
     ) internal {
         address _route = IDataStore(_context.dataStore).getAddress(Keys.routeAddressKey(_routeKey));
-        uint256[] memory _lastPuppetsAmountsIn = IDataStore(_context.dataStore).getUintArray(Keys.positionLastPuppetsAmountsInKey(_positionIndex, _route));
-        for (uint256 i = 0; i < _lastPuppetsAmountsIn.length; i++) {
-            assertTrue(_lastPuppetsAmountsIn[i] > 0, "_postSuccessfulIncreaseExecutionPuppetsSubscribed: E1");
+        {
+            uint256[] memory _lastPuppetsAmountsIn = IDataStore(_context.dataStore).getUintArray(Keys.positionLastPuppetsAmountsInKey(_positionIndex, _route));
+            for (uint256 i = 0; i < _lastPuppetsAmountsIn.length; i++) {
+                assertTrue(_lastPuppetsAmountsIn[i] > 0, "_postSuccessfulIncreaseExecutionPuppetsSubscribed: E1");
+            }
         }
         address _alice = _context.users.alice;
         address _bob = _context.users.bob;
