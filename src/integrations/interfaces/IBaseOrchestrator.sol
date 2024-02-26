@@ -282,7 +282,7 @@ interface IBaseOrchestrator {
     event UpdateOpenTimestamp(address[] puppets, bytes32 routeType);
     event TransferTokens(uint256 amount, address asset, address indexed caller);
     event ExecutePosition(uint256 performanceFeePaid, address indexed route, bytes32 requestKey, bool isExecuted, bool isIncrease);
-    event SharesIncrease(uint256[] puppetsShares, uint256 traderShares, uint256 totalSupply, address route, bytes32 requestKey);
+    event SharesIncrease(uint256[] puppetsShares, uint256 traderShares, uint256 totalSupply, address indexed route, bytes32 requestKey);
     event DecreaseSize(address indexed route, bytes32 requestKey, bytes32 routeKey, bytes32 positionKey);
 
     event Initialize(address platformFeeRecipient, address routeFactory, address gauge);
