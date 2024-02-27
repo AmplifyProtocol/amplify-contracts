@@ -270,7 +270,6 @@ abstract contract BaseRoute is IBaseRoute, ReentrancyGuard {
     // Private Mutated Functions
     // ============================================================================================
 
-    // @todo - refactor this is mentioend in IBaseRoute
     /// @notice The ```_getAssets``` function is used to get the assets of the Trader and Puppets and update the request accounting
     /// @param _swapParams The swap data of the Trader, enables the Trader to add collateral with a non-collateral token
     /// @param _executionFee The execution fee paid by the Trader, in ETH
@@ -285,40 +284,21 @@ abstract contract BaseRoute is IBaseRoute, ReentrancyGuard {
         address[] memory _puppets
     ) private returns (uint256 _puppetsAmountIn, uint256 _traderAmountIn, uint256 _traderShares, uint256 _totalSupply) {
         if (_swapParams.amount > 0) {
-            // 1. get trader assets and allocate request shares. pull funds too, if needed
             _traderAmountIn = _getTraderAssets(_swapParams, _executionFee);
-
             _traderShares = SharesHelper.convertToShares(0, 0, _traderAmountIn);
 
-            // 2. get puppets assets and allocate request shares
             IDataStore _dataStore = dataStore;
-            IBaseRoute.PuppetsRequest memory _puppetsRequest = RouteSetter.getPuppetsAssets(
+            (_puppetsAmountIn, _totalSupply) = RouteSetter.storeNewAddCollateralRequest(
                 _dataStore,
-                _traderShares,
                 _traderAmountIn,
+                _traderShares,
                 _puppets
             );
 
-            _totalSupply = _puppetsRequest.totalSupply;
-            _puppetsAmountIn = _puppetsRequest.puppetsAmountIn;
-
-            // 3. store request data
-            IBaseRoute.AddCollateralRequest memory _addCollateralRequest = IBaseRoute.AddCollateralRequest({
-                puppetsAmountIn: _puppetsAmountIn,
-                traderAmountIn: _traderAmountIn,
-                traderShares: _traderShares,
-                totalSupply: _totalSupply,
-                puppetsShares: _puppetsRequest.puppetsShares,
-                puppetsAmounts: _puppetsRequest.puppetsAmounts
-            });
-
-            RouteSetter.storeNewAddCollateralRequest(_dataStore, _addCollateralRequest);
-
-            // 4. pull funds from Orchestrator
-            address _collateralToken = _swapParams.path[_swapParams.path.length - 1];
-            IBaseOrchestrator(RouteReader.orchestrator(_dataStore)).transferTokens(_puppetsAmountIn, _collateralToken);
-
-            return (_puppetsAmountIn, _traderAmountIn, _traderShares, _totalSupply);
+            IBaseOrchestrator(RouteReader.orchestrator(_dataStore)).transferTokens(
+                _puppetsAmountIn,
+                _swapParams.path[_swapParams.path.length - 1]
+            );
         }
     }
 

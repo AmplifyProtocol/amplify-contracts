@@ -34,39 +34,6 @@ library RouteSetter {
     // External Functions
     // ============================================================================================
 
-    function getPuppetsAssets(
-        IDataStore _dataStore,
-        uint256 _totalSupply,
-        uint256 _totalAssets,
-        address[] memory _puppets
-    ) external returns (IBaseRoute.PuppetsRequest memory _puppetsRequest) {
-        if (CommonHelper.isPositionOpen(_dataStore, address(this))) {
-            /// @dev use existing position puppets
-            _puppets = RouteReader.puppetsInPosition(_dataStore);
-        } else {
-            /// @dev initialize position puppets
-            uint256 _puppetsLength = _puppets.length;
-            uint256 _positionIndex = RouteReader.positionIndex(_dataStore);
-            _dataStore.setAddressArray(Keys.positionPuppetsKey(_positionIndex, address(this)), _puppets);
-            _dataStore.setUintArray(Keys.positionPuppetsSharesKey(_positionIndex, address(this)), new uint256[](_puppetsLength));
-            _dataStore.setUintArray(Keys.positionLastPuppetsAmountsInKey(_positionIndex, address(this)), new uint256[](_puppetsLength));
-        }
-
-        bool _isAdjustmentRequired;
-        (_puppetsRequest, _isAdjustmentRequired) = RouteReader.puppetsRequestData(_dataStore, _totalSupply, _totalAssets, _puppets);
-
-        if (_isAdjustmentRequired) _dataStore.setBool(Keys.isWaitingForKeeperAdjustmentKey(address(this)), true);
-
-        IBaseOrchestrator _orchestrator = IBaseOrchestrator(RouteReader.orchestrator(_dataStore));
-        _orchestrator.debitAccounts(
-            _puppetsRequest.puppetsAmounts,
-            _puppets,
-            CommonHelper.collateralToken(_dataStore, address(this))
-        );
-
-        _orchestrator.updateLastPositionOpenedTimestamp(_puppetsRequest.puppetsToUpdateTimestamp);
-    }
-
     function storeKeeperRequest(IDataStore _dataStore, bytes32 _requestKey) external {
         _dataStore.setBool(Keys.isKeeperAdjustmentEnabledKey(address(this)), false);
         _dataStore.setBool(Keys.isKeeperRequestsKey(address(this), _requestKey), true);
@@ -87,14 +54,31 @@ library RouteSetter {
         _dataStore.removeBytes32(Keys.pendingRequestKey(_positionIndex, address(this)));
     }
 
-    function storeNewAddCollateralRequest(IDataStore _dataStore, IBaseRoute.AddCollateralRequest memory _addCollateralRequest) external {
+    function storeNewAddCollateralRequest(
+        IDataStore _dataStore,
+        uint256 _traderAmountIn,
+        uint256 _traderShares,
+        address[] memory _puppets
+    ) external returns (uint256 _puppetsAmountIn, uint256 _totalSupply) {
+        // get puppets assets and allocate request shares
+        IBaseRoute.PuppetsRequest memory _puppetsRequest = _getPuppetsAssets(
+            _dataStore,
+            _traderShares,
+            _traderAmountIn,
+            _puppets
+        );
+
+        _totalSupply = _puppetsRequest.totalSupply;
+        _puppetsAmountIn = _puppetsRequest.puppetsAmountIn;
+
+        // store request data
         uint256 _positionIndex = RouteReader.positionIndex(_dataStore);
-        _dataStore.setUint(Keys.addCollateralRequestPuppetsAmountInKey(_positionIndex, address(this)), _addCollateralRequest.puppetsAmountIn);
-        _dataStore.setUint(Keys.addCollateralRequestTraderAmountInKey(_positionIndex, address(this)), _addCollateralRequest.traderAmountIn);
-        _dataStore.setUint(Keys.addCollateralRequestTraderSharesKey(_positionIndex, address(this)), _addCollateralRequest.traderShares);
-        _dataStore.setUint(Keys.addCollateralRequestTotalSupplyKey(_positionIndex, address(this)), _addCollateralRequest.totalSupply);
-        _dataStore.setUintArray(Keys.addCollateralRequestPuppetsSharesKey(_positionIndex, address(this)), _addCollateralRequest.puppetsShares);
-        _dataStore.setUintArray(Keys.addCollateralRequestPuppetsAmountsKey(_positionIndex, address(this)), _addCollateralRequest.puppetsAmounts);
+        _dataStore.setUint(Keys.addCollateralRequestPuppetsAmountInKey(_positionIndex, address(this)), _puppetsAmountIn);
+        _dataStore.setUint(Keys.addCollateralRequestTraderAmountInKey(_positionIndex, address(this)), _traderAmountIn);
+        _dataStore.setUint(Keys.addCollateralRequestTraderSharesKey(_positionIndex, address(this)), _traderShares);
+        _dataStore.setUint(Keys.addCollateralRequestTotalSupplyKey(_positionIndex, address(this)), _totalSupply);
+        _dataStore.setUintArray(Keys.addCollateralRequestPuppetsSharesKey(_positionIndex, address(this)), _puppetsRequest.puppetsShares);
+        _dataStore.setUintArray(Keys.addCollateralRequestPuppetsAmountsKey(_positionIndex, address(this)), _puppetsRequest.puppetsAmounts);
     }
 
     function storePositionRequest(IDataStore _dataStore, uint256 _sizeDelta, bytes32 _requestKey) external {
@@ -266,6 +250,39 @@ library RouteSetter {
                 _requestKey
             );
         }
+    }
+
+    function _getPuppetsAssets(
+        IDataStore _dataStore,
+        uint256 _totalSupply,
+        uint256 _totalAssets,
+        address[] memory _puppets
+    ) private returns (IBaseRoute.PuppetsRequest memory _puppetsRequest) {
+        if (CommonHelper.isPositionOpen(_dataStore, address(this))) {
+            // use existing position puppets
+            _puppets = RouteReader.puppetsInPosition(_dataStore);
+        } else {
+            // initialize position puppets
+            uint256 _puppetsLength = _puppets.length;
+            uint256 _positionIndex = RouteReader.positionIndex(_dataStore);
+            _dataStore.setAddressArray(Keys.positionPuppetsKey(_positionIndex, address(this)), _puppets);
+            _dataStore.setUintArray(Keys.positionPuppetsSharesKey(_positionIndex, address(this)), new uint256[](_puppetsLength));
+            _dataStore.setUintArray(Keys.positionLastPuppetsAmountsInKey(_positionIndex, address(this)), new uint256[](_puppetsLength));
+        }
+
+        bool _isAdjustmentRequired;
+        (_puppetsRequest, _isAdjustmentRequired) = RouteReader.puppetsRequestData(_dataStore, _totalSupply, _totalAssets, _puppets);
+
+        if (_isAdjustmentRequired) _dataStore.setBool(Keys.isWaitingForKeeperAdjustmentKey(address(this)), true);
+
+        IBaseOrchestrator _orchestrator = IBaseOrchestrator(RouteReader.orchestrator(_dataStore));
+        _orchestrator.debitAccounts(
+            _puppetsRequest.puppetsAmounts,
+            _puppets,
+            CommonHelper.collateralToken(_dataStore, address(this))
+        );
+
+        _orchestrator.updateLastPositionOpenedTimestamp(_puppetsRequest.puppetsToUpdateTimestamp);
     }
 
     // ============================================================================================

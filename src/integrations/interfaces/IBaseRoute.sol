@@ -44,16 +44,6 @@ interface IBaseRoute {
         uint256 puppetKeeper; // the execution fee paid to the DecreaseSize Puppet keeper
     }
 
-    // @todo --> combine AddCollateralRequest and PuppetsRequest
-    struct AddCollateralRequest {
-        uint256 puppetsAmountIn;
-        uint256 traderAmountIn;
-        uint256 traderShares;
-        uint256 totalSupply;
-        uint256[] puppetsShares;
-        uint256[] puppetsAmounts;
-    }
-
     struct PuppetsRequest {
         uint256 puppetsAmountIn;
         uint256 totalSupply;
