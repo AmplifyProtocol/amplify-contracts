@@ -210,8 +210,8 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
         _updateWeights(_epoch);
 
         EpochInfo storage _epochInfo = epochInfo[_epoch];
-        _epochInfo.profitRewards += _amount * _epochInfo.profitWeight / _BASIS_POINTS_DIVISOR;
-        _epochInfo.volumeRewards += _amount * _epochInfo.volumeWeight / _BASIS_POINTS_DIVISOR;
+        if (_epochInfo.profitWeight > 0) _epochInfo.profitRewards += _amount * _epochInfo.profitWeight / _BASIS_POINTS_DIVISOR;
+        if (_epochInfo.volumeWeight > 0) _epochInfo.volumeRewards += _amount * _epochInfo.volumeWeight / _BASIS_POINTS_DIVISOR;
 
         emit DepositRewards(_amount);
     }
@@ -255,7 +255,6 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
     // Internal Functions
     // ============================================================================================
 
-    // @todo -- this reverts on 0 profit/volume
     function _claimableRewards(uint256 _epoch, address _user) internal view returns (uint256) {
         EpochInfo storage _epochInfo = epochInfo[_epoch];
         if (_epochInfo.claimed[_user]) return 0;
@@ -264,11 +263,15 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
         uint256 _userVolume = _epochInfo.userPerformance[_user].volume;
         if (_userProfit == 0 && _userVolume == 0) return 0;
 
-        uint256 _profitShare = _userProfit * _PRECISION / _epochInfo.totalProfit;
-        uint256 _volumeShare = _userVolume * _PRECISION / _epochInfo.totalVolume;
+        uint256 _userProfitRewards = 0;
+        if (_userProfit > 0 && _epochInfo.profitRewards > 0) {
+            _userProfitRewards = _userProfit * _epochInfo.profitRewards / _epochInfo.totalProfit;
+        }
 
-        uint256 _userProfitRewards = _profitShare * _epochInfo.profitRewards / _PRECISION;
-        uint256 _userVolumeRewards = _volumeShare * _epochInfo.volumeRewards / _PRECISION;
+        uint256 _userVolumeRewards = 0;
+        if (_userVolume > 0 && _epochInfo.volumeRewards > 0) {
+            _userVolumeRewards = _userVolume * _epochInfo.volumeRewards / _epochInfo.totalVolume;
+        }
 
         return _userProfitRewards + _userVolumeRewards;
     }
