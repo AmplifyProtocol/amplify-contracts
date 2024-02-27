@@ -128,9 +128,9 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
         _postInitEpochAsserts(); // epoch has not ended yet
 
         // TRADE 1st EPOCH (update ScoreGauge)
-        _updateScoreGauge(_scoreGauge1, users.alice);
-        _updateScoreGauge(_scoreGauge1, users.bob);
-        _updateScoreGauge(_scoreGauge1, users.yossi);
+        _updateScoreGauge(_scoreGauge1, users.alice, false);
+        _updateScoreGauge(_scoreGauge1, users.bob, false);
+        _updateScoreGauge(_scoreGauge1, users.yossi, false);
         _checkScoreGaugeTotals();
 
         // FINISH 1st EPOCH
@@ -165,9 +165,9 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
         _userVote2ndEpoch(users.yossi);
 
         // TRADE 2nd EPOCH (update ScoreGauge)
-        _updateScoreGauge(_scoreGauge2, users.alice);
-        _updateScoreGauge(_scoreGauge2, users.bob);
-        _updateScoreGauge(_scoreGauge2, users.yossi);
+        _updateScoreGauge(_scoreGauge2, users.alice, true);
+        _updateScoreGauge(_scoreGauge2, users.bob, true);
+        _updateScoreGauge(_scoreGauge2, users.yossi, true);
         _checkScoreGaugeTotals();
 
         // ON 2nd EPOCH END
@@ -195,9 +195,9 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
         _postVote3rdEpochAsserts();
 
         // TRADE 3rd EPOCH (update ScoreGauge)
-        _updateScoreGauge(_scoreGauge1, users.alice);
-        _updateScoreGauge(_scoreGauge1, users.bob);
-        _updateScoreGauge(_scoreGauge1, users.yossi);
+        _updateScoreGauge(_scoreGauge1, users.alice, false);
+        _updateScoreGauge(_scoreGauge1, users.bob, false);
+        _updateScoreGauge(_scoreGauge1, users.yossi, false);
         _checkScoreGaugeTotals();
 
         // ON 2nd EPOCH END
@@ -229,9 +229,9 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
         _postVote4thEpochAsserts();
 
         // TRADE 4th EPOCH (update ScoreGauge)
-        _updateScoreGauge(_scoreGauge3, users.alice);
-        _updateScoreGauge(_scoreGauge3, users.bob);
-        _updateScoreGauge(_scoreGauge3, users.yossi);
+        _updateScoreGauge(_scoreGauge3, users.alice, false);
+        _updateScoreGauge(_scoreGauge3, users.bob, false);
+        _updateScoreGauge(_scoreGauge3, users.yossi, false);
         _checkScoreGaugeTotals();
 
         // ON 4th EPOCH END
@@ -702,7 +702,7 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
         assertEq(_gaugeController.getTypeWeight(1), 1e18, "_post4thEpochEndAsserts: E15");
     }
 
-    function _updateScoreGauge(ScoreGauge _scoreGauge, address _user) internal {
+    function _updateScoreGauge(ScoreGauge _scoreGauge, address _user, bool _isZero) internal {
         (uint256 _volumeGeneratedBefore, uint256 _profitBefore) = _scoreGauge.userPerformance(_gaugeController.epoch(), _user);
 
         (
@@ -714,7 +714,7 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
         ) = _scoreGauge.epochInfo(_gaugeController.epoch());
 
         vm.prank(_route);
-        _scoreGauge.updateUserScore(1 ether, 1 ether, _user);
+        _scoreGauge.updateUserScore(1 ether, _isZero ? 0 : 1 ether, _user);
 
         (
             uint256 _profitRewards,
@@ -729,19 +729,19 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
 
         assertEq(_profitRewards, 0, "_updateScoreGauge: E1");
         assertEq(_volumeRewards, 0, "_updateScoreGauge: E2");
-        assertEq(_totalProfitAfter, _totalProfitBefore + 1 ether, "_updateScoreGauge: E3");
+        assertEq(_totalProfitAfter, _totalProfitBefore + (_isZero ? 0 : 1 ether), "_updateScoreGauge: E3");
         assertEq(_totalVolumeAfter, _totalVolumeBefore + 1 ether, "_updateScoreGauge: E4");
 
         assertEq(_profitWeight, 2000, "_updateScoreGauge: E5");
         assertEq(_volumeWeight, 8000, "_updateScoreGauge: E6");
         assertTrue(!_scoreGauge.hasClaimed(_gaugeController.epoch(), _user), "_updateScoreGauge: E7");
-        _updateScoreGaugeExtension(_scoreGauge, _volumeGeneratedBefore, _profitBefore, _user);
+        _updateScoreGaugeExtension(_scoreGauge, _volumeGeneratedBefore, _profitBefore, _user, _isZero ? 0 : 1 ether);
     }
 
-    function _updateScoreGaugeExtension(ScoreGauge _scoreGauge, uint256 _volumeGeneratedBefore, uint256 _profitBefore, address _user) internal {
+    function _updateScoreGaugeExtension(ScoreGauge _scoreGauge, uint256 _volumeGeneratedBefore, uint256 _profitBefore, address _user, uint256 _profit) internal {
         (uint256 _volumeGeneratedAfter, uint256 _profitAfter) = _scoreGauge.userPerformance(_gaugeController.epoch(), _user);
         assertEq(_volumeGeneratedBefore + 1 ether, _volumeGeneratedAfter, "_updateScoreGauge: E8");
-        assertEq(_profitBefore + 1 ether, _profitAfter, "_updateScoreGauge: E9");
+        assertEq(_profitBefore + _profit, _profitAfter, "_updateScoreGauge: E9");
     }
 
     function _checkScoreGaugeTotals() internal {
