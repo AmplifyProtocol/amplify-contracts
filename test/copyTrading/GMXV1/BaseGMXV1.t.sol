@@ -86,12 +86,12 @@ abstract contract BaseGMXV1 is BaseCopyTrading {
 
         bytes memory _gmxInfo = abi.encode(_gmxV1VaultPriceFeed, _gmxV1Router, _gmxV1Vault, _gmxV1PositionRouter);
         Orchestrator _orchestratorInstance = Orchestrator(payable(_orchestrator));
-        _orchestratorInstance.initialize(context.executionFee, _weth, users.owner, _routeFactory, address(_scoreGauge), _gmxInfo);
+        _orchestratorInstance.initialize(context.executionFee, _weth, users.owner, _routeFactory, address(_scoreGauge), address(_referralManager), _gmxInfo);
         _orchestratorInstance.setRouteType(_weth, _weth, true, _emptyBytes);
         _orchestratorInstance.setRouteType(_usdc, _weth, false, _emptyBytes);
 
         vm.expectRevert(bytes4(keccak256("AlreadyInitialized()")));
-        _orchestratorInstance.initialize(context.executionFee, _weth, users.owner, _routeFactory, address(_scoreGauge), _gmxInfo);
+        _orchestratorInstance.initialize(context.executionFee, _weth, users.owner, _routeFactory, address(_scoreGauge), address(_referralManager), _gmxInfo);
 
         IBaseOrchestrator(_orchestrator).depositExecutionFees{ value: 10 ether }();
 

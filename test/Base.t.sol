@@ -12,6 +12,8 @@ import {CommonHelper, Keys, RouteReader} from "../src/integrations/libraries/Rou
 import {DataStore} from "../src/integrations/utilities/DataStore.sol";
 import {DecreaseSizeResolver} from "../src/integrations/utilities/DecreaseSizeResolver.sol";
 
+import {ReferralManager} from "../src/utilities/ReferralManager.sol";
+
 import {FlashLoanHandler} from "../src/tokenomics/utilities/FlashLoanHandler.sol";
 import {AmplifyPriceOracle} from "../src/tokenomics/utilities/AmplifyPriceOracle.sol";
 
@@ -21,7 +23,7 @@ import {VotingEscrow} from "../src/tokenomics/VotingEscrow.sol";
 import {GaugeController} from "../src/tokenomics/GaugeController.sol";
 import {Minter} from "../src/tokenomics/Minter.sol";
 import {RevenueDistributer} from "../src/tokenomics/RevenueDistributer.sol";
-import {ScoreGauge} from "../src/tokenomics/ScoreGauge.sol";
+import {ScoreGauge, IVotingEscrow} from "../src/tokenomics/ScoreGauge.sol";
 
 import {DeployerUtilities} from "../script/utilities/DeployerUtilities.sol";
 
@@ -60,6 +62,7 @@ abstract contract Base is Test, DeployerUtilities {
     // utilities
     Governor internal _governor;
     DataStore internal _dataStore;
+    ReferralManager internal _referralManager;
 
     // token
     Amplify internal _ampl;
@@ -132,6 +135,8 @@ abstract contract Base is Test, DeployerUtilities {
         _gaugeController = new GaugeController(_governor, address(_ampl), address(_votingEscrow));
         _minter = new Minter(_ampl, _dAmpl, _gaugeController);
         _scoreGauge = new ScoreGauge(_governor, _votingEscrow, _minter, _dataStore, _dAmpl, IERC20(address(_ampl)));
+
+        _referralManager = new ReferralManager(_governor, IVotingEscrow(address(_votingEscrow)));
 
         _setUserRole(_governor, users.owner, 0, true);
         _setUserRole(_governor, users.keeper, 1, true);

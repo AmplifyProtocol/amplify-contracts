@@ -186,8 +186,9 @@ interface IBaseOrchestrator {
     /// @param _platformFeeRecipient The address of the platform fees recipient
     /// @param _routeFactory The address of the RouteFactory
     /// @param _gauge The address of the Score Gauge
+    /// @param _referralManager The address of the ReferralManager
     /// @param _data The bytes of any additional data
-    function initialize(uint256 _minExecutionFee, address _wnt, address _platformFeeRecipient, address _routeFactory, address _gauge, bytes memory _data) external;
+    function initialize(uint256 _minExecutionFee, address _wnt, address _platformFeeRecipient, address _routeFactory, address _gauge, address _referralManager, bytes memory _data) external;
 
     /// @notice The ```depositExecutionFees``` function is called by anyone to deposit execution fees which are used by the Keeper to adjust the position in case it doesn't meet the target leverage
     function depositExecutionFees() external payable;
