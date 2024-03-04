@@ -316,6 +316,7 @@ contract CallbackAsserts is BaseHelper {
                 _positionIndex = _dataStoreInstance.getUint(Keys.positionIndexKey(_route)) - 1;
                 assertEq(_dataStoreInstance.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex + 1, _route)), 0, "_postSuccessfulDecreaseExecution: E13");
                 assertEq(_dataStoreInstance.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex, _route)), _beforeData.volumeGeneratedBefore, "_postSuccessfulDecreaseExecution: E013");
+                _postSuccessfulDecreaseExecutionScoreGauge(_context, _positionIndex);
             } else {
                 _positionIndex = _dataStoreInstance.getUint(Keys.positionIndexKey(_route));
                 assertEq(_dataStoreInstance.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex, _route)), _beforeData.volumeGeneratedBefore, "_postSuccessfulDecreaseExecution: E14");
@@ -335,5 +336,18 @@ contract CallbackAsserts is BaseHelper {
         } else {
             assertEq(_orchestratorCollateralTokenBalanceAfter, _beforeData.orchestratorCollateralTokenBalanceBefore, "_postSuccessfulDecreaseExecution: E22");
         }
+    }
+
+    function _postSuccessfulDecreaseExecutionScoreGauge(Context memory _context, address _route) internal { // todo - here
+        uint256 _positionIndex = _context.dataStore.getUint(Keys.positionIndexKey(_route)) - 1;
+        uint256 _totalVolume = _context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex + 1, _route))
+        uint256 _puppetsProfit = _context.dataStore.getUint(Keys
+        uint256 _traderProfit = _context.dataStore.getUint(Keys
+
+        assertEq(_context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex + 1, _route)), 0, "_postSuccessfulDecreaseExecution: E13");
+
+        // check that users volume/profit was set
+        // check that referrer volume/profit was set
+        // check that the boost was applied
     }
 }

@@ -32,10 +32,11 @@ contract ReferralManager is IReferralManager, Auth {
     IVotingEscrow public votingEscrow;
 
     uint256 public constant TIERS = 4;
-    uint256 public constant ULTRA_BOOST = 5000; // 50%
-    uint256 public constant MAX_BOOST = 2500; // 25%
-    uint256 public constant MID_BOOST = 1000; // 10%
-    uint256 public constant LOW_BOOST = 500; // 5%
+    uint256 public constant REFERRER_SHARE = 500; // 5%
+    uint256 public constant ULTRA_BOOST = 15000; // 50%
+    uint256 public constant MAX_BOOST = 12500; // 25%
+    uint256 public constant MID_BOOST = 11000; // 10%
+    uint256 public constant LOW_BOOST = 10500; // 5%
     uint256 public constant ULTRA_TIER = 1_000_000 * 1e18; // 10% of total supply
     uint256 public constant MAX_TIER = 100_000 * 1e18; // 1% of total supply
     uint256 public constant MID_TIER = 10_000 * 1e18; // 0.1% of total supply
@@ -54,7 +55,7 @@ contract ReferralManager is IReferralManager, Auth {
     // ============================================================================================
 
     /// @inheritdoc IReferralManager
-    function getCodeTier(bytes32 _code) public view returns (uint256) {
+    function codeTier(bytes32 _code) public view returns (uint256) {
         uint256 _veBalance = votingEscrow.balanceOf(_codeOwners[_code], block.timestamp);
         if (_veBalance >= ULTRA_TIER) {
             return TIERS;
@@ -70,8 +71,13 @@ contract ReferralManager is IReferralManager, Auth {
     }
 
     /// @inheritdoc IReferralManager
-    function getCodeBoost(bytes32 _code) external view returns (uint256) {
-        uint256 _tier = getCodeTier(_code);
+    function referrerShare() external pure returns (uint256) {
+        return REFERRER_SHARE;
+    }
+
+    /// @inheritdoc IReferralManager
+    function codeBoost(bytes32 _code) external view returns (uint256) {
+        uint256 _tier = codeTier(_code);
         if (_tier == TIERS) {
             return ULTRA_BOOST;
         } else if (_tier == TIERS - 1) {
@@ -86,12 +92,12 @@ contract ReferralManager is IReferralManager, Auth {
     }
 
     /// @inheritdoc IReferralManager
-    function getCodeOwner(bytes32 _code) external view returns (address) {
+    function codeOwner(bytes32 _code) external view returns (address) {
         return _codeOwners[_code];
     }
 
     /// @inheritdoc IReferralManager
-    function getUserCode(address _user) external view returns (bytes32) {
+    function userCode(address _user) external view returns (bytes32) {
         return _userCodes[_user];
     }
 

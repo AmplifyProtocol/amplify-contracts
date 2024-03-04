@@ -21,25 +21,29 @@ interface IReferralManager {
     // View Functions
     // ============================================================================================
 
-    /// @notice The ```getCodeTier``` function returns the tier of a given code
+    /// @notice The ```codeTier``` function returns the tier of a given code
     /// @param _code The code
     /// @return _tier The tier
-    function getCodeTier(bytes32 _code) external view returns (uint256 _tier);
+    function codeTier(bytes32 _code) external view returns (uint256 _tier);
 
-    /// @notice The ```getCodeBoost``` function returns the boost of a given code
+    /// @notice The ```referrerShare``` function returns the percentage of volume/profit that the referrer earns
+    /// @return _share The share percentage
+    function referrerShare() external view returns (uint256 _share);
+
+    /// @notice The ```codeBoost``` function returns the boost of a given code
     /// @param _code The code
     /// @return _boost The boost
-    function getCodeBoost(bytes32 _code) external view returns (uint256 _boost);
+    function codeBoost(bytes32 _code) external view returns (uint256 _boost);
 
-    /// @notice The ```getCodeOwner``` function returns the owner of a given code
+    /// @notice The ```codeOwner``` function returns the owner of a given code
     /// @param _code The code
     /// @return _owner The owner
-    function getCodeOwner(bytes32 _code) external view returns (address _owner);
+    function codeOwner(bytes32 _code) external view returns (address _owner);
 
-    /// @notice The ```getUserCode``` function returns the code of a given user
+    /// @notice The ```userCode``` function returns the code of a given user
     /// @param _user The user
     /// @return _code The code
-    function getUserCode(address _user) external view returns (bytes32 _code);
+    function userCode(address _user) external view returns (bytes32 _code);
 
     // ============================================================================================
     // Mutated Functions

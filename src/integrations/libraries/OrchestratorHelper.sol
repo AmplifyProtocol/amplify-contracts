@@ -334,7 +334,7 @@ library OrchestratorHelper {
                     * ((_traderPnL * -1).toUint256()) / CommonHelper.collateralTokenDecimals(_dataStore, _collateralToken);
             }
 
-            _applyReferralBoost(_dataStore, _volume, _profit, _scoreData.users[_scoreData.length]);
+            (_volume, _profit) = _applyReferralBoost(_dataStore, _volume, _profit, _scoreData.users[_scoreData.length]);
 
             _scoreData.volumes[_scoreData.length] = _volume;
             _scoreData.profits[_scoreData.length] = _profit;
@@ -348,21 +348,22 @@ library OrchestratorHelper {
         address _user
     ) internal returns (uint256, uint256) {
         IReferralManager _referralManager = IReferralManager(_dataStore.getAddress(Keys.REFERRAL_MANAGER));
-        bytes32 _referralCode = _referralManager.getUserCode(_user);
+        bytes32 _referralCode = _referralManager.userCode(_user);
         if (_referralCode != bytes32(0)) {
             uint256 _referrerProfit = 0;
-            uint256 _referrerVolume = _volume * 5 / 100; // give referrer 5% of the volume // @todo - fix
-            uint256 _boost = _referralManager.getCodeBoost(_referralCode);
-            _volume = _volume * _boost / CommonHelper.basisPointsDivisor(); // @todo - fix
+            uint256 _boost = _referralManager.codeBoost(_referralCode);
+            uint256 _basisPointsDivisor = CommonHelper.basisPointsDivisor();
+            _volume = _volume * _boost / _basisPointsDivisor;
             if (_profit > 0) {
-                _referrerProfit = _profit * 5 / 100; // give referrer 5% of the profit // @todo - fix
-                _profit = _profit * _boost / CommonHelper.basisPointsDivisor();
+                _profit = _profit * _boost / _basisPointsDivisor;
+                _referrerProfit = _profit * _referralManager.referrerShare() / _basisPointsDivisor;
             }
 
+            uint256 _referrerVolume = _volume * _referralManager.referrerShare() / _basisPointsDivisor;
             IScoreGauge(CommonHelper.scoreGauge(_dataStore)).updateReferrerScore(
                 _referrerVolume,
                 _referrerProfit,
-                _referralManager.getCodeOwner(_referralCode)
+                _referralManager.codeOwner(_referralCode)
             );
         }
 
