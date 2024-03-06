@@ -57,6 +57,8 @@ library Keys {
     bytes32 public constant ROUTE_SETTER = keccak256(abi.encode("ROUTE_SETTER"));
     /// @dev key for the address of the Orchestrator
     bytes32 public constant ORCHESTRATOR = keccak256(abi.encode("ORCHESTRATOR"));
+    /// @dev key for the address of the Referral Manager
+    bytes32 public constant REFERRAL_MANAGER = keccak256(abi.encode("REFERRAL_MANAGER"));
 
     // DataStore.boolValues
 

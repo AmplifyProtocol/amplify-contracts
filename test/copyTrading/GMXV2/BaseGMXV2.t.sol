@@ -154,6 +154,7 @@ abstract contract BaseGMXV2 is BaseCopyTrading {
             forkIDs: forkIDs,
             orchestrator: IBaseOrchestrator(_orchestrator),
             dataStore: _dataStore,
+            referralManager: _referralManager,
             decreaseSizeResolver: payable(_decreaseSizeResolver),
             wnt: _wnt,
             usdc: _usdcOld,
@@ -168,12 +169,12 @@ abstract contract BaseGMXV2 is BaseCopyTrading {
 
         bytes memory _gmxMocksInfo = abi.encode(_gmxV2MockRouter, _gmxV2MockExchangeRouter, _gmxV2MockOrderVault, _gmxV2MockOrderHandler, _gmxMockV2Reader, _gmxMockV2DataStore);
         Orchestrator _orchestratorInstance = Orchestrator(payable(_orchestrator));
-        _orchestratorInstance.initialize(context.executionFee, _weth, users.owner, _routeFactory, address(_scoreGauge), _gmxMocksInfo);
+        _orchestratorInstance.initialize(context.executionFee, _weth, users.owner, _routeFactory, address(_scoreGauge), address(_referralManager), _gmxMocksInfo);
         _orchestratorInstance.setRouteType(_weth, _weth, true, _ethLongMarketData);
         _orchestratorInstance.setRouteType(_usdcOld, _weth, false, _ethShortMarketData);
 
         vm.expectRevert(bytes4(keccak256("AlreadyInitialized()")));
-        _orchestratorInstance.initialize(context.executionFee, _weth, users.owner, _routeFactory, address(_scoreGauge), _gmxMocksInfo);
+        _orchestratorInstance.initialize(context.executionFee, _weth, users.owner, _routeFactory, address(_scoreGauge), address(_referralManager), _gmxMocksInfo);
 
         IBaseOrchestrator(_orchestrator).depositExecutionFees{ value: 10 ether }();
 

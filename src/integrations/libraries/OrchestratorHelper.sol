@@ -21,6 +21,10 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {CommonHelper, Keys, IDataStore} from "./CommonHelper.sol";
 import {SharesHelper} from "./SharesHelper.sol";
 
+import {IReferralManager} from "../../utilities/interfaces/IReferralManager.sol";
+
+import {IScoreGauge} from "../../tokenomics/interfaces/IScoreGauge.sol";
+
 import {IBaseOrchestrator, IBaseRoute} from "../interfaces/IBaseOrchestrator.sol";
 import {IBaseRouteFactory} from "../interfaces/IBaseRouteFactory.sol";
 
@@ -30,6 +34,13 @@ import {IBaseRouteFactory} from "../interfaces/IBaseRouteFactory.sol";
 library OrchestratorHelper {
 
     using SafeCast for int256;
+
+    struct ScoreData {
+        uint256 length;
+        uint256[] volumes;
+        uint256[] profits;
+        address[] users;
+    }
 
     // ============================================================================================
     // View Functions
@@ -73,32 +84,6 @@ library OrchestratorHelper {
             _executionFees.dexKeeper < CommonHelper.minExecutionFee(_dataStore) ||
             (_executionFees.puppetKeeper > 0 && _executionFees.puppetKeeper < CommonHelper.minPuppetExecutionFee(_dataStore))
         ) revert InvalidExecutionFee();
-    }
-
-    function usersScore(
-        IDataStore _dataStore,
-        address _route
-    ) external view returns (uint256[] memory _volumes, uint256[] memory _profits, address[] memory _users) {
-        uint256 _positionIndex = _dataStore.getUint(Keys.positionIndexKey(_route));
-        uint256 _cumulativeVolumeGenerated = _dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex, _route));
-        if (_cumulativeVolumeGenerated > 0) {
-            uint256 _puppetsProfitInUSD = 0;
-            int256 _puppetsPnL = _dataStore.getInt(Keys.puppetsPnLKey(_positionIndex, _route));
-            address _collateralToken = CommonHelper.collateralToken(_dataStore, _route);
-            if (_puppetsPnL < 0) {
-                _puppetsProfitInUSD = IBaseOrchestrator(CommonHelper.orchestrator(_dataStore)).getPrice(_collateralToken)
-                    * ((_puppetsPnL * -1).toUint256()) / CommonHelper.collateralTokenDecimals(_dataStore, _collateralToken);
-            }
-
-            uint256 _totalSupply = _dataStore.getUint(Keys.positionTotalSupplyKey(_positionIndex,_route));
-            (_volumes, _profits, _users) = _usersScoreData(
-                _dataStore,
-                _route,
-                _cumulativeVolumeGenerated,
-                _totalSupply,
-                _puppetsProfitInUSD
-            );
-        }
     }
 
     // ============================================================================================
@@ -203,13 +188,15 @@ library OrchestratorHelper {
         address _wnt,
         address _platformFeesRecipient,
         address _routeFactory,
-        address _gauge
+        address _gauge,
+        address _referralManager
     ) external {
         _dataStore.setUint(Keys.MIN_EXECUTION_FEE, _minExecutionFee);
         _dataStore.setAddress(Keys.WNT, _wnt);
         _dataStore.setAddress(Keys.PLATFORM_FEES_RECIPIENT, _platformFeesRecipient);
         _dataStore.setAddress(Keys.ROUTE_FACTORY, _routeFactory);
         _dataStore.setAddress(Keys.SCORE_GAUGE, _gauge);
+        _dataStore.setAddress(Keys.REFERRAL_MANAGER, _referralManager);
         _dataStore.setAddress(Keys.ORCHESTRATOR, address(this));
 
         uint256 _maxPuppets = 100;
@@ -261,6 +248,34 @@ library OrchestratorHelper {
         _dataStore.incrementUint(Keys.platformAccountKey(_token), _feeAmount);
     }
 
+    function usersScore(
+        IDataStore _dataStore,
+        address _route
+    ) external returns (uint256[] memory _volumes, uint256[] memory _profits, address[] memory _users) {
+        uint256 _positionIndex = _dataStore.getUint(Keys.positionIndexKey(_route));
+        uint256 _cumulativeVolumeGenerated = _dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex, _route));
+        if (_cumulativeVolumeGenerated > 0) {
+            uint256 _puppetsProfitInUSD = 0;
+            int256 _puppetsPnL = _dataStore.getInt(Keys.puppetsPnLKey(_positionIndex, _route));
+            address _collateralToken = CommonHelper.collateralToken(_dataStore, _route);
+            if (_puppetsPnL < 0) {
+                _puppetsProfitInUSD = IBaseOrchestrator(CommonHelper.orchestrator(_dataStore)).getPrice(_collateralToken)
+                    * ((_puppetsPnL * -1).toUint256()) / CommonHelper.collateralTokenDecimals(_dataStore, _collateralToken);
+            }
+
+            uint256 _totalSupply = _dataStore.getUint(Keys.positionTotalSupplyKey(_positionIndex,_route));
+            ScoreData memory _scoreData = _usersScoreData(
+                _dataStore,
+                _route,
+                _cumulativeVolumeGenerated,
+                _totalSupply,
+                _puppetsProfitInUSD
+            );
+
+            return (_scoreData.volumes, _scoreData.profits, _scoreData.users);
+        }
+    }
+
     // ============================================================================================
     // Private Functions
     // ============================================================================================
@@ -271,55 +286,88 @@ library OrchestratorHelper {
         uint256 _cumulativeVolumeGenerated,
         uint256 _totalSupply,
         uint256 _puppetsProfitInUSD
-    ) private view returns (
-        uint256[] memory _volumes,
-        uint256[] memory _profits,
-        address[] memory _users
-    ) {
+    ) private returns (ScoreData memory _scoreData) {
         uint256 _positionIndex = _dataStore.getUint(Keys.positionIndexKey(_route));
+        uint256 _traderShares = _dataStore.getUint(Keys.positionTraderSharesKey(_positionIndex, _route));
         address[] memory _puppets = _dataStore.getAddressArray(Keys.positionPuppetsKey(_positionIndex, _route));
 
-        uint256 _puppetsLength = _puppets.length;
-        _volumes = new uint256[](_puppetsLength + 1);
-        _profits = new uint256[](_puppetsLength + 1);
-        _users = new address[](_puppetsLength + 1);
+        _scoreData.length = _puppets.length;
+        _scoreData.volumes = new uint256[](_scoreData.length + 1);
+        _scoreData.profits = new uint256[](_scoreData.length + 1);
+        _scoreData.users = new address[](_scoreData.length + 1);
 
         {
             uint256[] memory _puppetsShares = _dataStore.getUintArray(Keys.positionPuppetsSharesKey(_positionIndex, _route));
-            for (uint256 i = 0; i < _puppetsLength; i++) {
-                _users[i] = _puppets[i];
+            for (uint256 i = 0; i < _scoreData.length; i++) {
+                _scoreData.users[i] = _puppets[i];
                 uint256 _shares = _puppetsShares[i];
                 if (_shares > 0) {
-                    _volumes[i] = SharesHelper.convertToAssets(_cumulativeVolumeGenerated, _totalSupply, _shares);
+                    uint256 _profit = 0;
+                    uint256 _volume = SharesHelper.convertToAssets(_cumulativeVolumeGenerated, _totalSupply, _shares);
                     if (_puppetsProfitInUSD > 0) {
-                        _profits[i] = SharesHelper.convertToAssets(_puppetsProfitInUSD, _totalSupply, _shares);
+                        _profit = SharesHelper.convertToAssets(_puppetsProfitInUSD, _totalSupply - _traderShares, _shares);
                     }
+
+                    (_volume, _profit) = _applyReferralBoost(_dataStore, _volume, _profit, _puppets[i]);
+
+                    _scoreData.volumes[i] = _volume;
+                    _scoreData.profits[i] = _profit;
                 }
             }
         }
 
-        _users[_puppetsLength] = CommonHelper.trader(_dataStore, _route);
+        _scoreData.users[_scoreData.length] = CommonHelper.trader(_dataStore, _route);
 
         {
-            uint256 _traderShares = _dataStore.getUint(Keys.positionTraderSharesKey(_positionIndex, _route));
-            _volumes[_puppetsLength] = SharesHelper.convertToAssets(
+            uint256 _volume = SharesHelper.convertToAssets(
                 _cumulativeVolumeGenerated,
                 _totalSupply,
                 _traderShares
             );
-        }
 
-        {
+            uint256 _profit = 0;
             int256 _traderPnL = _dataStore.getInt(Keys.traderPnLKey(_positionIndex, _route));
             if (_traderPnL < 0) {
                 address _collateralToken = CommonHelper.collateralToken(_dataStore, _route);
                 IBaseOrchestrator _orchestrator = IBaseOrchestrator(CommonHelper.orchestrator(_dataStore));
-                _profits[_puppetsLength] = _orchestrator.getPrice(_collateralToken)
+                _profit = _orchestrator.getPrice(_collateralToken)
                     * ((_traderPnL * -1).toUint256()) / CommonHelper.collateralTokenDecimals(_dataStore, _collateralToken);
             }
+
+            (_volume, _profit) = _applyReferralBoost(_dataStore, _volume, _profit, _scoreData.users[_scoreData.length]);
+
+            _scoreData.volumes[_scoreData.length] = _volume;
+            _scoreData.profits[_scoreData.length] = _profit;
+        }
+    }
+
+    function _applyReferralBoost(
+        IDataStore _dataStore,
+        uint256 _volume,
+        uint256 _profit,
+        address _user
+    ) internal returns (uint256, uint256) {
+        IReferralManager _referralManager = IReferralManager(_dataStore.getAddress(Keys.REFERRAL_MANAGER));
+        bytes32 _referralCode = _referralManager.userCode(_user);
+        if (_referralCode != bytes32(0)) {
+            uint256 _referrerProfit = 0;
+            uint256 _boost = _referralManager.codeBoost(_referralCode);
+            uint256 _basisPointsDivisor = CommonHelper.basisPointsDivisor();
+            _volume = _volume * _boost / _basisPointsDivisor;
+            if (_profit > 0) {
+                _profit = _profit * _boost / _basisPointsDivisor;
+                _referrerProfit = _profit * _referralManager.referrerShare() / _basisPointsDivisor;
+            }
+
+            uint256 _referrerVolume = _volume * _referralManager.referrerShare() / _basisPointsDivisor;
+            IScoreGauge(CommonHelper.scoreGauge(_dataStore)).updateReferrerScore(
+                _referrerVolume,
+                _referrerProfit,
+                _referralManager.codeOwner(_referralCode)
+            );
         }
 
-        return (_volumes, _profits, _users);
+        return (_volume, _profit);
     }
 
     // ============================================================================================

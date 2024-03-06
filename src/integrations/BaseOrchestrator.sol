@@ -379,6 +379,7 @@ abstract contract BaseOrchestrator is IBaseOrchestrator, Auth, GlobalReentrancyG
         address _platformFeeRecipient,
         address _routeFactory,
         address _gauge,
+        address _referralManager,
         bytes memory _data
     ) external requiresAuth {
         if (_initialized) revert AlreadyInitialized();
@@ -387,18 +388,19 @@ abstract contract BaseOrchestrator is IBaseOrchestrator, Auth, GlobalReentrancyG
 
         _initialized = true;
 
-        OrchestratorHelper.setInitializeData(
+        OrchestratorHelper.setInitializeData( // @todo - fix this so that we get interfaces and not address (to make sure init is correct)
             dataStore,
             _minExecutionFee,
             _wnt,
             _platformFeeRecipient,
             _routeFactory,
-            _gauge
+            _gauge,
+            _referralManager
         );
 
         _initialize(_data);
 
-        emit Initialize(_platformFeeRecipient, _routeFactory, _gauge);
+        emit Initialize(_platformFeeRecipient, _routeFactory, _gauge); // @todo fix this event
     }
 
     /// @inheritdoc IBaseOrchestrator

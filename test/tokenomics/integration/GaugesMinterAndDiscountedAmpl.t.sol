@@ -6,6 +6,7 @@ import "../../Base.t.sol";
 contract GaugesMinterAndDiscountedAmplTests is Base {
 
     address internal _route;
+    address internal _orchestrator;
 
     ScoreGauge internal _scoreGauge1;
     ScoreGauge internal _scoreGauge2;
@@ -65,12 +66,14 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
 
         vm.stopPrank();
 
-        // setup a mock Route
+        // setup a mocks
         _route = _createUser("Route");
+        _orchestrator = _createUser("Orchestrator");
         bytes32 _routeKey = CommonHelper.routeKey(_dataStore, _route);
         require(_routeKey != bytes32(0), "GaugesAndMinterTests setUp: routeKey is 0");
         vm.startPrank(users.owner);
         _dataStore.setBool(Keys.isRouteRegisteredKey(_route), true);
+        _dataStore.setAddress(keccak256(abi.encode("ORCHESTRATOR")), _orchestrator);
         vm.stopPrank();
 
         vm.startPrank(users.owner);
@@ -713,8 +716,8 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
             ,
         ) = _scoreGauge.epochInfo(_gaugeController.epoch());
 
-        vm.prank(_route);
-        _scoreGauge.updateUserScore(1 ether, _isZero ? 0 : 1 ether, _user);
+        vm.prank(address(_scoreGauge));
+        _scoreGauge.updateReferrerScore(1 ether, _isZero ? 0 : 1 ether, _user);
 
         (
             uint256 _profitRewards,
