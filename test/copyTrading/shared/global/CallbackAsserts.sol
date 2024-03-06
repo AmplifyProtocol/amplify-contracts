@@ -316,7 +316,7 @@ contract CallbackAsserts is BaseHelper {
                 _positionIndex = _dataStoreInstance.getUint(Keys.positionIndexKey(_route)) - 1;
                 assertEq(_dataStoreInstance.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex + 1, _route)), 0, "_postSuccessfulDecreaseExecution: E13");
                 assertEq(_dataStoreInstance.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex, _route)), _beforeData.volumeGeneratedBefore, "_postSuccessfulDecreaseExecution: E013");
-                _postSuccessfulDecreaseExecutionScoreGauge(_context, _positionIndex);
+                _postSuccessfulDecreaseExecutionScoreGauge(_context, _route);
             } else {
                 _positionIndex = _dataStoreInstance.getUint(Keys.positionIndexKey(_route));
                 assertEq(_dataStoreInstance.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex, _route)), _beforeData.volumeGeneratedBefore, "_postSuccessfulDecreaseExecution: E14");
@@ -338,16 +338,27 @@ contract CallbackAsserts is BaseHelper {
         }
     }
 
-    function _postSuccessfulDecreaseExecutionScoreGauge(Context memory _context, address _route) internal { // todo - here
+    function _postSuccessfulDecreaseExecutionScoreGauge(Context memory _context, address _route) internal {// todo - here
         uint256 _positionIndex = _context.dataStore.getUint(Keys.positionIndexKey(_route)) - 1;
-        uint256 _totalVolume = _context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex + 1, _route))
-        uint256 _puppetsProfit = _context.dataStore.getUint(Keys
-        uint256 _traderProfit = _context.dataStore.getUint(Keys
+        uint256 _totalVolume = _context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex, _route));
+        uint256 _puppetsProfit;
+        uint256 _traderProfit;
+        if (_context.expectations.isExpectingReferralBoost) {
+            _puppetsProfit = uint256(_context.dataStore.getInt(Keys.puppetsPnLKey(_positionIndex, _route)) * -1);
+            _traderProfit = uint256(_context.dataStore.getInt(Keys.traderPnLKey(_positionIndex, _route)) * -1);
 
-        assertEq(_context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex + 1, _route)), 0, "_postSuccessfulDecreaseExecution: E13");
+            assertTrue(_puppetsProfit > 0, "_postSuccessfulDecreaseExecutionScoreGauge: E1");
+            assertTrue(_traderProfit > 0, "_postSuccessfulDecreaseExecutionScoreGauge: E2");
+        }
 
-        // check that users volume/profit was set
+        assertTrue(_totalVolume > 0, "_postSuccessfulDecreaseExecutionScoreGauge: E3");
+        assertEq(_context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex + 1, _route)), 0, "_postSuccessfulDecreaseExecutionScoreGauge: E4");
+
+        // todo - here
+        revert("zxc");
+
         // check that referrer volume/profit was set
+        // _context.expectations.subscribedPuppets[0]
         // check that the boost was applied
     }
 }

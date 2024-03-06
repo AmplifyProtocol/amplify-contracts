@@ -37,6 +37,7 @@ contract ReferralManager is IReferralManager, Auth {
     uint256 public constant MAX_BOOST = 12500; // 25%
     uint256 public constant MID_BOOST = 11000; // 10%
     uint256 public constant LOW_BOOST = 10500; // 5%
+    uint256 public constant STANDARD_BOOST = 10250; // 2.5%
     uint256 public constant ULTRA_TIER = 1_000_000 * 1e18; // 10% of total supply
     uint256 public constant MAX_TIER = 100_000 * 1e18; // 1% of total supply
     uint256 public constant MID_TIER = 10_000 * 1e18; // 0.1% of total supply
@@ -87,7 +88,7 @@ contract ReferralManager is IReferralManager, Auth {
         } else if (_tier == TIERS - 3) {
             return LOW_BOOST;
         } else {
-            return 0;
+            return STANDARD_BOOST;
         }
     }
 

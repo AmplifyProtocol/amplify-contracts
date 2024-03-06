@@ -14,6 +14,7 @@ import {RequestPosition} from "./trader/RequestPosition.sol";
 import {Initialize} from "./global/Initialize.sol";
 import {Fees} from "./global/Fees.sol";
 import {CallbackAsserts} from "./global/CallbackAsserts.sol";
+import {ReferralLink} from "./global/ReferralLink.sol";
 
 import {FuzzPuppetDeposit} from "./fuzz/puppet/Deposit.sol";
 import {FuzzPuppetWithdraw} from "./fuzz/puppet/Withdraw.sol";
@@ -44,6 +45,7 @@ abstract contract BaseCopyTrading is Base {
     Fees internal _fees;
     RequestPosition internal _requestPosition;
     CallbackAsserts internal _callbackAsserts;
+    ReferralLink internal _referralLink;
 
     FuzzPuppetDeposit internal _fuzz_PuppetDeposit;
     FuzzPuppetWithdraw internal _fuzz_PuppetWithdraw;
@@ -65,6 +67,7 @@ abstract contract BaseCopyTrading is Base {
         _fees = new Fees();
         _requestPosition = new RequestPosition();
         _callbackAsserts = new CallbackAsserts();
+        _referralLink = new ReferralLink();
 
         _fuzz_PuppetDeposit = new FuzzPuppetDeposit();
         _fuzz_PuppetWithdraw = new FuzzPuppetWithdraw();

@@ -93,12 +93,6 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
         _;
     }
 
-    /// @notice Ensures the caller is the Orchestrator
-    modifier onlyOrchestrator() {
-        if (msg.sender != CommonHelper.orchestrator(dataStore)) revert NotOrchestrator();
-        _;
-    }
-
     // ============================================================================================
     // External Functions
     // ============================================================================================
@@ -223,7 +217,7 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
     }
 
     /// @inheritdoc IScoreGauge
-    function updateUsersScore(address _route) external nonReentrant onlyRoute {
+    function updateUsersScore(address _route) external onlyRoute {
         if (!_isKilled) {
             (
                 uint256[] memory _volumes,
@@ -241,7 +235,9 @@ contract ScoreGauge is IScoreGauge, IERC721Receiver, Auth, ReentrancyGuard {
     }
 
     /// @inheritdoc IScoreGauge
-    function updateReferrerScore(uint256 _volume, uint256 _profit, address _user) external nonReentrant onlyOrchestrator {
+    function updateReferrerScore(uint256 _volume, uint256 _profit, address _user) external {
+        if (msg.sender != address(this)) revert InvalidCaller(); // called by `updateUsersScore` using `OrchestratorHelper`
+
         if (!_isKilled) {
             uint256 _epoch = controller.epoch();
             EpochInfo storage _epochInfo = epochInfo[_epoch];

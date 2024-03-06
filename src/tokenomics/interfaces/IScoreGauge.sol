@@ -137,7 +137,7 @@ interface IScoreGauge {
     error InvalidEpoch();
     error AlreadyClaimed();
     error NotRoute();
-    error NotOrchestrator();
+    error InvalidCaller();
     error InvalidWeights();
     error NoRewards();
     error ZeroAddress();

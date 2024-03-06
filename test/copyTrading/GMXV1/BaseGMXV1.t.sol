@@ -72,6 +72,7 @@ abstract contract BaseGMXV1 is BaseCopyTrading {
             forkIDs: forkIDs,
             orchestrator: IBaseOrchestrator(_orchestrator),
             dataStore: _dataStore,
+            referralManager: _referralManager,
             decreaseSizeResolver: payable(_decreaseSizeResolver),
             wnt: _wnt,
             usdc: _usdc,

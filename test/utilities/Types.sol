@@ -3,6 +3,8 @@ pragma solidity 0.8.23;
 
 import {IDataStore} from "../../src/integrations/utilities/interfaces/IDataStore.sol";
 
+import {IReferralManager} from "../../src/utilities/interfaces/IReferralManager.sol";
+
 import {IBaseOrchestrator} from "../../src/integrations/interfaces/IBaseOrchestrator.sol";
 
 struct Users {
@@ -20,6 +22,8 @@ struct Users {
     address payable bob;
     // random Puppet #3
     address payable yossi;
+    // referrer
+    address payable referrer;
 }
 
 struct Expectations {
@@ -45,6 +49,8 @@ struct Expectations {
     bool isExpectingNonZeroBalance;
     // if true, then we cancelled the order
     bool isOrderCancelled;
+    // if true, we expect a referral boost
+    bool isExpectingReferralBoost;
     // a request key to execute
     bytes32 requestKeyToExecute;
     // puppets that are subscribed to the route
@@ -64,6 +70,7 @@ struct Context {
     ForkIDs forkIDs;
     IBaseOrchestrator orchestrator;
     IDataStore dataStore;
+    IReferralManager referralManager;
     address payable decreaseSizeResolver;
     address wnt;
     address usdc;

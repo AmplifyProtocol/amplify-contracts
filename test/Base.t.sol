@@ -100,7 +100,8 @@ abstract contract Base is Test, DeployerUtilities {
             keeper: _createUser("Keeper"),
             alice: _createUser("Alice"),
             bob: _createUser("Bob"),
-            yossi: _createUser("Yossi")
+            yossi: _createUser("Yossi"),
+            referrer: _createUser("Referrer")
         });
 
         _deployTokenAndUtils();
@@ -159,6 +160,7 @@ abstract contract Base is Test, DeployerUtilities {
     function _labelContracts() internal {
         vm.label({ account: address(_governor), newLabel: "Vovernor" });
         vm.label({ account: address(_dataStore), newLabel: "DataStore" });
+        vm.label({ account: address(_referralManager), newLabel: "ReferralManager" });
         vm.label({ account: address(_ampl), newLabel: "AMPL" });
         vm.label({ account: address(_dAmpl), newLabel: "dAMPL" });
         vm.label({ account: address(_votingEscrow), newLabel: "VotingEscrow" });
