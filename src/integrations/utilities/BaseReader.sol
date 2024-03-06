@@ -16,6 +16,15 @@ abstract contract BaseReader {
         uint256 priceImpact; // ?
     }
 
+    struct PositionData {
+        uint256 sizeInUsd;
+        uint256 sizeInTokens;
+        uint256 collateralAmount;
+        address market;
+        address collateralToken;
+        bool isLong;
+    }
+
     // Market Data
 
     // executionFee (from our datastore)
@@ -43,7 +52,7 @@ abstract contract BaseReader {
 
     // need to look what GMXV2 Reader returns - https://github.com/gmx-io/gmx-synthetics/blob/main/contracts/reader/ReaderUtils.sol#L54
     // (stuff like fees/OI/etc, but make it generelized)
-    // function getPosition(bytes32 _routeTypeKey, address _trader)
+    function getPosition(bytes32 _routeTypeKey, address _trader) virtual public view returns (PositionData memory _position);
 
     // function getEstRewards() // when i finish implementing tokenomics features in the copy trading system we'll look into it
 

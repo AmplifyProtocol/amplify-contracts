@@ -97,6 +97,23 @@ contract GMXV2Reader is BaseReader {
          });
     }
 
+    function getPosition(bytes32 _routeTypeKey, address _trader) override public view returns (PositionData memory _position){
+        (address _route,) =  _getMarket(_routeTypeKey, _trader);
+        bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
+        Position.Props memory positionProps = reader.getPosition(
+            gmxDataStore,
+            _key
+        );
+         _position = PositionData({
+            sizeInUsd: positionProps.numbers.sizeInUsd,
+            sizeInTokens: positionProps.numbers.sizeInTokens,
+            collateralAmount: positionProps.numbers.collateralAmount,
+            market: positionProps.addresses.market,
+            collateralToken: positionProps.addresses.collateralToken,
+            isLong: positionProps.flags.isLong
+         });
+    }
+
     function getLiquidationPrice(bytes32 _routeTypeKey, uint256 acceptablePrice, uint256 triggerPrice) override public view returns (uint256 _liquidationPrice) {}
 
     // ============================================================================================
