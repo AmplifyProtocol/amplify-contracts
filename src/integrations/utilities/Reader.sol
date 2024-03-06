@@ -88,8 +88,13 @@ contract GMXV2Reader is BaseReader {
         return GMXV2OrchestratorHelper.getPrice(amplifyDataStore, _token);
     }
 
-    function getFees(bytes32 _routeTypeKey) override public view returns (Fees memory _fees) {
-        
+    function getFees(bytes32 _routeTypeKey, address _trader) override public view returns (Fees memory _fees) {
+        _fees = Fees({
+            executionFee: 0, // To be added
+            fundingFee: _getFundingFee(_routeTypeKey, _trader),
+            borrowFee: _getBorrowingFee(_routeTypeKey, _trader),
+            priceImpact: 0 // To be added
+         });
     }
 
     function getLiquidationPrice(bytes32 _routeTypeKey, uint256 acceptablePrice, uint256 triggerPrice) override public view returns (uint256 _liquidationPrice) {}

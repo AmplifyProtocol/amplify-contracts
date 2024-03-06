@@ -21,7 +21,7 @@ abstract contract BaseReader {
     // executionFee (from our datastore)
     // fundingFee/borrowFee per second/hour from GMX
     // priceImpact not sure how this goes, need to look into
-    function getFees(bytes32 _routeTypeKey) virtual public view returns (Fees memory _fees);
+    function getFees(bytes32 _routeTypeKey, address _trader) virtual public view returns (Fees memory _fees);
 
     // available liq in usd with 30 decimals
     function getAvailableLiquidity(bytes32 _routeTypeKey, address _trader) virtual public view returns (uint256 _longTokenUsd, uint256 _shortTokenUsd);
