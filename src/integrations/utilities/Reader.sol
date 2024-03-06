@@ -16,95 +16,102 @@ pragma solidity 0.8.23;
 // ==============================================================
 
 import {GMXV2Keys} from "../../../../../src/integrations/GMXV2/libraries/GMXV2Keys.sol";
-import {IGMXReader, IGMXDataStore, IGMXMarket, IGMXPosition} from "../../../../../src/integrations/GMXV2/interfaces/IGMXReader.sol";
-import {Keys} from "src/integrations/libraries/Keys.sol";
-import {IDataStore} from "src/integrations/utilities/interfaces/IDataStore.sol";
-import {CommonHelper, GMXV2OrchestratorHelper} from "src/integrations/GMXV2/libraries/GMXV2OrchestratorHelper.sol";
+import {GMXV2OrchestratorHelper} from "src/integrations/GMXV2/libraries/GMXV2OrchestratorHelper.sol";
+import {IGMXV2Reader, Market, Price, MarketPoolValueInfo, Position} from "src/integrations/utilities/interfaces/IGmxV2Reader.sol";
+import {DataStore} from "src/integrations/utilities/DataStore.sol";
+import "./BaseReader.sol";
 
-contract Reader {
-    address gmxV2Reader = address(0x38d91ED96283d62182Fc6d990C24097A918a4d9b);
-    address gmxV2DataStore =address(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8);
-    // address gmxV2GasUtils = address(0x6205489A49459bDD6B14CdC80D9E7991B829D48B);
 
-    IDataStore _dataStore = IDataStore(gmxV2DataStore);
+contract GMXV2Reader is BaseReader {
 
-    struct ExecutionFees {
-        uint256 minExecutionFees;
-        uint256 minPuppetExecutionFee;
-        uint256 managmentFee;
-        uint256 withdrawalFee;
-        uint256 performanceFee;
+    IGMXV2Reader constant reader = IGMXV2Reader(0xf60becbba223EEA9495Da3f606753867eC10d139);
+    IDataStore constant _gmxDataStore = IDataStore(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8);
+    DataStore gmxDataStore = DataStore(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8);
+
+    // ============================================================================================
+    // View Functions
+    // ============================================================================================
+
+    function getAvailableLiquidity(bytes32 _routeTypeKey, address _trader) override public view returns (uint256 _longTokenUsd, uint256 _shortTokenUsd) {
+        (,address market) =  _getMarket(_routeTypeKey, _trader);
+
+         Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
+
+        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
+        uint256 longTokenPrice = getPrice(marketProps.longToken);
+        uint256 shortTokenPrice = getPrice(marketProps.shortToken);
+
+        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
+        Price.Props memory longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
+        Price.Props memory shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
+
+        (,MarketPoolValueInfo.Props memory marketValueProp) = reader.getMarketTokenPrice(
+            gmxDataStore,
+            marketProps,
+            indexTokenPriceProps,
+            longTokenPriceProps,
+            shortTokenPriceProps,
+            keccak256(abi.encode("MAX_PNL_FACTOR")),
+            true
+        );
+        return (marketValueProp.longTokenUsd, marketValueProp.shortTokenUsd);
     }
 
-    function getPosition(
-        bytes32 _routeTypeKey,
-        address _trader
-    ) external view returns (uint256 _size, uint256 _collateral) {
-        (, address _route) = _getRoute(_routeTypeKey, _trader);
-        return GMXV2OrchestratorHelper.positionAmounts(_dataStore, _route);
+    function getOpenInterest(bytes32 _routeTypeKey, address _trader) override public view returns (uint256 _longIO, uint256 _shortIO) {
+        (,address market) =  _getMarket(_routeTypeKey, _trader);
+
+        Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
+
+        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
+
+        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
+
+        (int256 _long) = reader.getOpenInterestWithPnl(
+            gmxDataStore,
+            marketProps,
+            indexTokenPriceProps,
+            true,
+            true
+        );
+
+        (int256 _short) = reader.getOpenInterestWithPnl(
+            gmxDataStore,
+            marketProps,
+            indexTokenPriceProps,
+            false,
+            true
+        );
+        return (uint256(_long), uint256(_short));
     }
 
-    function getFees()
-        external
-        view
-        returns (ExecutionFees memory _executionFees)
-    {
-        _executionFees = ExecutionFees({
-            minExecutionFees: _dataStore.getUint(Keys.MIN_EXECUTION_FEE),
-            minPuppetExecutionFee: _dataStore.getUint(Keys.PUPPET_KEEPER_MIN_EXECUTION_FEE),
-            managmentFee: _dataStore.getUint(Keys.MANAGEMENT_FEE),
-            withdrawalFee: _dataStore.getUint(Keys.WITHDRAWAL_FEE),
-            performanceFee: _dataStore.getUint(Keys.PERFORMANCE_FEE)
-        });
+    function getPrice(address _token) override public view returns (uint256 _price) {
+        return GMXV2OrchestratorHelper.getPrice(amplifyDataStore, _token);
     }
 
-    function getPrice(address _token) external view returns (uint256 _price) {
-        return _price = GMXV2OrchestratorHelper.getPrice(_dataStore, _token);
+    function getFees(bytes32 _routeTypeKey) override public view returns (Fees memory _fees) {}
+
+    function getLiquidationPrice(bytes32 _routeTypeKey, uint256 acceptablePrice, uint256 triggerPrice) override public view returns (uint256 _liquidationPrice) {}
+
+    // ============================================================================================
+    // Internal View Functions
+    // ============================================================================================
+
+    function _getMarket(bytes32 _routeTypeKey, address _trader) internal view returns (address _route, address _market) {
+        address _collateralToken = gmxDataStore.getAddress(Keys.routeTypeCollateralTokenKey(_routeTypeKey));
+        address _indexToken = gmxDataStore.getAddress(Keys.routeTypeIndexTokenKey(_routeTypeKey));
+        bool _isLong = gmxDataStore.getBool(Keys.routeTypeIsLongKey(_routeTypeKey));
+        bytes32 _routeKey = keccak256(abi.encode(_trader, _collateralToken, _indexToken, _isLong));
+        _route = gmxDataStore.getAddress(Keys.routeAddressKey(_routeKey));
+        return (_route, GMXV2OrchestratorHelper.gmxMarketToken(amplifyDataStore, _route));
     }
 
-    function getPendingRoute(
-        bytes32 _routeTypeKey,
-        address _trader
-    ) external view returns (address _router) {
-        (bytes32 _routeKey, address _route) = _getRoute(_routeTypeKey, _trader);
-
-        if (
-            GMXV2OrchestratorHelper.isWaitingForCallback(_dataStore, _routeKey)
-        ) {
-            return _route;
-        }
-    }
-
-    function _getRoute(
-        bytes32 _routeTypeKey,
-        address _trader
-    ) internal view returns (bytes32 _routeKey, address _route) {
-        address _collateralToken = _dataStore.getAddress(Keys.routeTypeCollateralTokenKey(_routeTypeKey));
-        address _indexToken = _dataStore.getAddress(Keys.routeTypeIndexTokenKey(_routeTypeKey));
-        bool _isLong = _dataStore.getBool(Keys.routeTypeIsLongKey(_routeTypeKey));
-        _routeKey = keccak256(abi.encode(_trader, _collateralToken, _indexToken, _isLong));
-        _route = _dataStore.getAddress(Keys.routeAddressKey(_routeKey));
-
-        return (_routeKey, _route);
+    function _getFundingFee(bytes32 _routeTypeKey, address _trader) internal view returns (uint256) {
+        (address _route,) =  _getMarket(_routeTypeKey, _trader);
+        bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
+        Position.Props memory positionProps = reader.getPosition(
+            gmxDataStore,
+            _key
+        );
+        return positionProps.numbers.fundingFeeAmountPerSize;
     }
 }
-
-// TODO:
-// function getAvailableLiquidity(bytes32 _routeTypeKey) external returns (uint256 x) {}
-// function getEstRewards() internal {}
-// function getOpenInterest() external returns(){}
-
-// (Via SUBGRAPH) get24HChange(address token) external returns uint256
-// (Via SUBGRAPH) get24HHigh(address token) external returns uint256
-// (Via SUBGRAPH) get24HLow(address token) external returns uint256
-
-// getLiquidationPrice(bytes32 _routeTypeKey, uint256 acceptablePrice, uint256 triggerPrice) external returns (uint256 price) {}
-
-// (Via SUBGRAPH) ** getRoutes(address _trader) - returns all Routes owned by a trader
-// ** getTraderPendingRequests(address _trader) - address[] bytes32
-// ** getRoutePendingRequests(bytes32 _routeTypeKey, address _trader) - address[] bytes32
-// getSwapMinAmount(address[] _path) - returns uint256
-
-// getBestPuppets(address[] _puppets)
-// getSizeDelta(address[] _puppets, uint256 _traderSizeDelta)
-// getDecreaseCollateralDelta(address[] _puppets, uint256 _traderDecreaseCollagteralDelta)

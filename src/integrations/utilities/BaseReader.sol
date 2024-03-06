@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.23;
 
+import {Keys} from "src/integrations/libraries/Keys.sol";
+import {IDataStore} from "src/integrations/utilities/interfaces/IDataStore.sol";
+
 abstract contract BaseReader {
+    
+    // address constant _amplifyDataStore = address(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
+    IDataStore constant amplifyDataStore = IDataStore(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
 
     struct Fees {
         uint256 executionFee;
@@ -18,10 +24,10 @@ abstract contract BaseReader {
     function getFees(bytes32 _routeTypeKey) virtual public view returns (Fees memory _fees);
 
     // available liq in usd with 30 decimals
-    function getAvailableLiquidity(bytes32 _routeTypeKey) virtual public view returns (uint256 _availableLiquidity);
+    function getAvailableLiquidity(bytes32 _routeTypeKey, address _trader) virtual public view returns (uint256 _longTokenUsd, uint256 _shortTokenUsd);
 
     // short/long open interest in usd with 30 decimals
-    function getOpenInterest(bytes32 _routeTypeKey) virtual public view returns (uint256 _longIO, uint256 _shortIO);
+    function getOpenInterest(bytes32 _routeTypeKey, address _trader) virtual public view returns (uint256 _longIO, uint256 _shortIO);
 
     // need to look how gmx calcs that
     function getLiquidationPrice(bytes32 _routeTypeKey, uint256 acceptablePrice, uint256 triggerPrice) virtual public view returns (uint256 _liquidationPrice);
@@ -71,4 +77,6 @@ abstract contract BaseReader {
     // getDecreaseCollateralDelta(address[] _puppets, uint256 _traderDecreaseCollagteralDelta) // same as above
 
     // * regarding getDecreaseSizeDelta/getDecreaseCollateralDelta -- need to think more about it, so feel free to shot me a dm if your not sure
+
+    
 }
