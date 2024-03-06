@@ -288,6 +288,7 @@ library OrchestratorHelper {
         uint256 _puppetsProfitInUSD
     ) private returns (ScoreData memory _scoreData) {
         uint256 _positionIndex = _dataStore.getUint(Keys.positionIndexKey(_route));
+        uint256 _traderShares = _dataStore.getUint(Keys.positionTraderSharesKey(_positionIndex, _route));
         address[] memory _puppets = _dataStore.getAddressArray(Keys.positionPuppetsKey(_positionIndex, _route));
 
         _scoreData.length = _puppets.length;
@@ -304,7 +305,7 @@ library OrchestratorHelper {
                     uint256 _profit = 0;
                     uint256 _volume = SharesHelper.convertToAssets(_cumulativeVolumeGenerated, _totalSupply, _shares);
                     if (_puppetsProfitInUSD > 0) {
-                        _profit = SharesHelper.convertToAssets(_puppetsProfitInUSD, _totalSupply, _shares);
+                        _profit = SharesHelper.convertToAssets(_puppetsProfitInUSD, _totalSupply - _traderShares, _shares);
                     }
 
                     (_volume, _profit) = _applyReferralBoost(_dataStore, _volume, _profit, _puppets[i]);
@@ -318,7 +319,6 @@ library OrchestratorHelper {
         _scoreData.users[_scoreData.length] = CommonHelper.trader(_dataStore, _route);
 
         {
-            uint256 _traderShares = _dataStore.getUint(Keys.positionTraderSharesKey(_positionIndex, _route));
             uint256 _volume = SharesHelper.convertToAssets(
                 _cumulativeVolumeGenerated,
                 _totalSupply,
@@ -341,7 +341,7 @@ library OrchestratorHelper {
         }
     }
 
-    function _applyReferralBoost( // @todo - test this
+    function _applyReferralBoost(
         IDataStore _dataStore,
         uint256 _volume,
         uint256 _profit,

@@ -338,27 +338,42 @@ contract CallbackAsserts is BaseHelper {
         }
     }
 
-    function _postSuccessfulDecreaseExecutionScoreGauge(Context memory _context, address _route) internal {// todo - here
-        uint256 _positionIndex = _context.dataStore.getUint(Keys.positionIndexKey(_route)) - 1;
-        uint256 _totalVolume = _context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex, _route));
-        uint256 _puppetsProfit;
-        uint256 _traderProfit;
+    function _postSuccessfulDecreaseExecutionScoreGauge(Context memory _context, address _route) internal {
         if (_context.expectations.isExpectingReferralBoost) {
+            uint256 _positionIndex = _context.dataStore.getUint(Keys.positionIndexKey(_route)) - 1;
+            uint256 _totalVolume = _context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex, _route));
+            uint256 _puppetsProfit;
+            uint256 _traderProfit;
+
             _puppetsProfit = uint256(_context.dataStore.getInt(Keys.puppetsPnLKey(_positionIndex, _route)) * -1);
             _traderProfit = uint256(_context.dataStore.getInt(Keys.traderPnLKey(_positionIndex, _route)) * -1);
+            address _collateralToken = CommonHelper.collateralToken(_context.dataStore, _route);
+            _traderProfit = _context.orchestrator.getPrice(_collateralToken) * _traderProfit / CommonHelper.collateralTokenDecimals(_context.dataStore, _collateralToken);
+            _puppetsProfit = _context.orchestrator.getPrice(_collateralToken) * _puppetsProfit / CommonHelper.collateralTokenDecimals(_context.dataStore, _collateralToken);
 
             assertTrue(_puppetsProfit > 0, "_postSuccessfulDecreaseExecutionScoreGauge: E1");
             assertTrue(_traderProfit > 0, "_postSuccessfulDecreaseExecutionScoreGauge: E2");
+
+            assertTrue(_totalVolume > 0, "_postSuccessfulDecreaseExecutionScoreGauge: E3");
+            assertEq(_context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex + 1, _route)), 0, "_postSuccessfulDecreaseExecutionScoreGauge: E4");
+
+            uint256 _userProfit;
+            uint256 _userVolume;
+            address _scoreGauge = _context.dataStore.getAddress(keccak256(abi.encode("SCORE_GAUGE")));
+            require(_scoreGauge != address(0), "_postSuccessfulDecreaseExecutionScoreGauge: ADDRESS 0");
+            (_userVolume, _userProfit) = ScoreGauge(_scoreGauge).userPerformance(0, _context.expectations.subscribedPuppets[0]);
+            assertEq(_userProfit, _puppetsProfit * 10250 / 10000, "_postSuccessfulDecreaseExecutionScoreGauge: E5");
+            assertTrue(_userVolume > 0, "_postSuccessfulDecreaseExecutionScoreGauge: E6");
+
+            (_userVolume, _userProfit) = ScoreGauge(_scoreGauge).userPerformance(0, CommonHelper.trader(_context.dataStore, _route));
+            assertEq(_userProfit, _traderProfit * 10250 / 10000, "_postSuccessfulDecreaseExecutionScoreGauge: E7");
+            assertTrue(_userVolume > 0, "_postSuccessfulDecreaseExecutionScoreGauge: E8");
+
+            uint256 _expectedReferrerProfit = (((_puppetsProfit + _traderProfit) * 10250 / 10000) * 5 / 100);
+            uint256 _expectedReferrerVolume = ((_totalVolume * 10250 / 10000) * 5 / 100);
+            (_userVolume, _userProfit) = ScoreGauge(_scoreGauge).userPerformance(0, _context.users.referrer);
+            assertEq(_userProfit, _expectedReferrerProfit, "_postSuccessfulDecreaseExecutionScoreGauge: E9");
+            assertEq(_userVolume, _expectedReferrerVolume, "_postSuccessfulDecreaseExecutionScoreGauge: E10");
         }
-
-        assertTrue(_totalVolume > 0, "_postSuccessfulDecreaseExecutionScoreGauge: E3");
-        assertEq(_context.dataStore.getUint(Keys.cumulativeVolumeGeneratedKey(_positionIndex + 1, _route)), 0, "_postSuccessfulDecreaseExecutionScoreGauge: E4");
-
-        // todo - here
-        revert("zxc");
-
-        // check that referrer volume/profit was set
-        // _context.expectations.subscribedPuppets[0]
-        // check that the boost was applied
     }
 }

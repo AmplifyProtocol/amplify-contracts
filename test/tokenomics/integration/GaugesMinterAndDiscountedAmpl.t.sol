@@ -716,7 +716,7 @@ contract GaugesMinterAndDiscountedAmplTests is Base {
             ,
         ) = _scoreGauge.epochInfo(_gaugeController.epoch());
 
-        vm.prank(_orchestrator);
+        vm.prank(address(_scoreGauge));
         _scoreGauge.updateReferrerScore(1 ether, _isZero ? 0 : 1 ether, _user);
 
         (
