@@ -88,7 +88,9 @@ contract GMXV2Reader is BaseReader {
         return GMXV2OrchestratorHelper.getPrice(amplifyDataStore, _token);
     }
 
-    function getFees(bytes32 _routeTypeKey) override public view returns (Fees memory _fees) {}
+    function getFees(bytes32 _routeTypeKey) override public view returns (Fees memory _fees) {
+        
+    }
 
     function getLiquidationPrice(bytes32 _routeTypeKey, uint256 acceptablePrice, uint256 triggerPrice) override public view returns (uint256 _liquidationPrice) {}
 
@@ -113,5 +115,43 @@ contract GMXV2Reader is BaseReader {
             _key
         );
         return positionProps.numbers.fundingFeeAmountPerSize;
+    }
+
+    function _getBorrowingFeePoolFactor(bytes32 _routeTypeKey, address _trader) internal view returns (uint256 _borrowingFeePoolFactor) {
+        (,address market) =  _getMarket(_routeTypeKey, _trader);
+
+         Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
+
+        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
+        uint256 longTokenPrice = getPrice(marketProps.longToken);
+        uint256 shortTokenPrice = getPrice(marketProps.shortToken);
+
+        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
+        Price.Props memory longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
+        Price.Props memory shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
+
+        (,MarketPoolValueInfo.Props memory marketValueProp) = reader.getMarketTokenPrice(
+            gmxDataStore,
+            marketProps,
+            indexTokenPriceProps,
+            longTokenPriceProps,
+            shortTokenPriceProps,
+            keccak256(abi.encode("MAX_PNL_FACTOR")),
+            true
+        );
+        return marketValueProp.borrowingFeePoolFactor;
+    }
+
+    function _getBorrowingFee(bytes32 _routeTypeKey, address _trader) internal view returns (uint256 _borrowingFees) {
+        (address _route,) =  _getMarket(_routeTypeKey, _trader);
+        bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
+        Position.Props memory positionProps = reader.getPosition(
+            gmxDataStore,
+            _key
+        );
+        // Calculate the difference between the pool borrowing factor and the position borrowing factor
+        uint256 _borrowingFactorDifference = _getBorrowingFeePoolFactor(_routeTypeKey,_trader) - positionProps.numbers.borrowingFactor;
+        
+        return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference);
     }
 }
