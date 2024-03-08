@@ -478,11 +478,11 @@ interface IGMXV2Reader {
     //     uint256 end
     // ) external view returns (ReaderUtils.MarketInfo[] memory);
 
-    // function getMarketInfo(
-    //     DataStore dataStore,
-    //     MarketUtils.MarketPrices memory prices,
-    //     address marketKey
-    // ) public view returns (ReaderUtils.MarketInfo memory);
+    function getMarketInfo(
+        DataStore dataStore,
+        MarketUtils.MarketPrices memory prices,
+        address marketKey
+    ) external view returns (ReaderUtils.MarketInfo memory);
 
     function getMarketTokenPrice(
         DataStore dataStore,
