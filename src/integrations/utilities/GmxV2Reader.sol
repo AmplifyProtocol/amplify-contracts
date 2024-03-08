@@ -176,4 +176,32 @@ contract GMXV2Reader is BaseReader {
         
         return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference);
     }
+
+    function getFundingPerHour(bytes32 _routeTypeKey, address _trader) external view returns (bool longsPayShorts, int256 longFunding, int256 shortFunding) {
+        (,address market) =  _getMarket(_routeTypeKey, _trader);
+        // address longToken; 
+        // address shortToken; 
+        // uint256 longInterestUsingLongToken = _gmxDataStore.getUint(Keys.openInterestKey(market, longToken, true));
+        // uint256 longInterestUsingShortToken = _gmxDataStore.getUint(Keys.openInterestKey(market, shortToken, true));
+        // uint256 shortInterestUsingLongToken = _gmxDataStore.getUint(Keys.openInterestKey(market, longToken, false));
+        // uint256 shortInterestUsingShortToken = _gmxDataStore.getUint(Keys.openInterestKey(market, shortToken, false));
+        // uint256 longInterestUsd = longInterestUsingLongToken + longInterestUsingShortToken;
+        // uint256 shortInterestUsd = shortInterestUsingLongToken + shortInterestUsingShortToken;
+        bytes32 SAVED_FUNDING_FACTOR_PER_SECOND = keccak256(abi.encode("SAVED_FUNDING_FACTOR_PER_SECOND"));
+        bytes32 _key = keccak256(abi.encode(SAVED_FUNDING_FACTOR_PER_SECOND,market));
+        int256 fundingFactor = _gmxDataStore.getInt(_key);
+        (uint256 longInterestUsd, uint256 shortInterestUsd) = getOpenInterest(_routeTypeKey, _trader);
+        
+        longsPayShorts = fundingFactor > 0;
+        int256 factorPerHourA = -fundingFactor * 1 hours;
+        uint256 ratio = shortInterestUsd < longInterestUsd ? (shortInterestUsd * 1e30 / longInterestUsd) : (longInterestUsd * 1e30 / shortInterestUsd);
+        int256 factorPerHourB = (int256(ratio) * fundingFactor / int256(1e30)) * int256(1 hours);
+        if (longsPayShorts) {
+            longFunding = factorPerHourA / 1e20;
+            shortFunding = factorPerHourB / 1e20;
+        } else {
+            longFunding = factorPerHourB / 1e20;
+            shortFunding = factorPerHourA / 1e20;
+        }
+    }
 }

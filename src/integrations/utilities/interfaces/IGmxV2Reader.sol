@@ -176,6 +176,24 @@ library MarketUtils {
         Price.Props longTokenPrice;
         Price.Props shortTokenPrice;
     }
+
+    struct CollateralType {
+        uint256 longToken;
+        uint256 shortToken;
+    }
+
+    struct PositionType {
+        CollateralType long;
+        CollateralType short;
+    }
+
+    struct GetNextFundingAmountPerSizeResult {
+        bool longsPayShorts;
+        uint256 fundingFactorPerSecond;
+        int256 nextSavedFundingFactorPerSecond;
+        PositionType fundingFeeAmountPerSizeDelta;
+        PositionType claimableFundingAmountPerSizeDelta;
+    }
 }
 
 library Market {
@@ -302,6 +320,99 @@ library Order {
         bool isFrozen;
     }
 }
+
+library ReaderUtils {
+    struct PositionInfo {
+        Position.Props position;
+        PositionPricingUtils.PositionFees fees;
+        ReaderPricingUtils.ExecutionPriceResult executionPriceResult;
+        int256 basePnlUsd;
+        int256 uncappedBasePnlUsd;
+        int256 pnlAfterPriceImpactUsd;
+    }
+
+    struct BaseFundingValues {
+        MarketUtils.PositionType fundingFeeAmountPerSize;
+        MarketUtils.PositionType claimableFundingAmountPerSize;
+    }
+
+    struct VirtualInventory {
+        uint256 virtualPoolAmountForLongToken;
+        uint256 virtualPoolAmountForShortToken;
+        int256 virtualInventoryForPositions;
+    }
+
+    struct MarketInfo {
+        Market.Props market;
+        uint256 borrowingFactorPerSecondForLongs;
+        uint256 borrowingFactorPerSecondForShorts;
+        BaseFundingValues baseFunding;
+        MarketUtils.GetNextFundingAmountPerSizeResult nextFunding;
+        VirtualInventory virtualInventory;
+        bool isDisabled;
+    }
+}
+
+library PositionPricingUtils {
+    struct PositionReferralFees {
+        bytes32 referralCode;
+        address affiliate;
+        address trader;
+        uint256 totalRebateFactor;
+        uint256 traderDiscountFactor;
+        uint256 totalRebateAmount;
+        uint256 traderDiscountAmount;
+        uint256 affiliateRewardAmount;
+    }
+
+    struct PositionFundingFees {
+        uint256 fundingFeeAmount;
+        uint256 claimableLongTokenAmount;
+        uint256 claimableShortTokenAmount;
+        uint256 latestFundingFeeAmountPerSize;
+        uint256 latestLongTokenClaimableFundingAmountPerSize;
+        uint256 latestShortTokenClaimableFundingAmountPerSize;
+    }
+
+    struct PositionBorrowingFees {
+        uint256 borrowingFeeUsd;
+        uint256 borrowingFeeAmount;
+        uint256 borrowingFeeReceiverFactor;
+        uint256 borrowingFeeAmountForFeeReceiver;
+    }
+
+    struct PositionUiFees {
+        address uiFeeReceiver;
+        uint256 uiFeeReceiverFactor;
+        uint256 uiFeeAmount;
+    }
+
+    struct PositionFees {
+        PositionReferralFees referral;
+        PositionFundingFees funding;
+        PositionBorrowingFees borrowing;
+        PositionUiFees ui;
+        Price.Props collateralTokenPrice;
+        uint256 positionFeeFactor;
+        uint256 protocolFeeAmount;
+        uint256 positionFeeReceiverFactor;
+        uint256 feeReceiverAmount;
+        uint256 feeAmountForPool;
+        uint256 positionFeeAmountForPool;
+        uint256 positionFeeAmount;
+        uint256 totalCostAmountExcludingFunding;
+        uint256 totalCostAmount;
+    }
+}
+
+library ReaderPricingUtils {
+    struct ExecutionPriceResult {
+        int256 priceImpactUsd;
+        uint256 priceImpactDiffUsd;
+        uint256 executionPrice;
+    }
+}
+
 import {DataStore} from "src/integrations/utilities/DataStore.sol";
 
 interface IGMXV2Reader {
