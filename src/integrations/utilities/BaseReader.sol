@@ -31,6 +31,15 @@ abstract contract BaseReader {
         bool isLong;
     }
 
+    struct OpenInterest {
+        uint256 openInterestLong;
+        uint256 openInterestShort;
+        uint256 maxOpenInterestLong;
+        uint256 maxOpenInterestShort;
+        uint256 openInterestReserveLong;
+        uint256 openInterestReserveShort;
+    }
+
     // Market Data
 
     // executionFee (from our datastore)

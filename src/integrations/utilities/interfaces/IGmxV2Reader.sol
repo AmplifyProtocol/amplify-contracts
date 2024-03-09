@@ -419,7 +419,23 @@ library GmxKeys {
 
     // @dev key for open interest
     bytes32 public constant OPEN_INTEREST = keccak256(abi.encode("OPEN_INTEREST"));
+
+    // @dev key for max open interest
+    bytes32 public constant MAX_OPEN_INTEREST = keccak256(abi.encode("MAX_OPEN_INTEREST"));
     
+    // @dev key for open interest reserve factor
+    bytes32 public constant OPEN_INTEREST_RESERVE_FACTOR = keccak256(abi.encode("OPEN_INTEREST_RESERVE_FACTOR"));
+
+    // @dev the key for the max open interest
+    // @param market the market for the pool
+    // @param isLong whether the key is for the long or short side
+    function maxOpenInterestKey(address market, bool isLong) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            MAX_OPEN_INTEREST,
+            market,
+            isLong
+        ));
+    }
     // @dev key for open interest
     // @param market the market to check
     // @param collateralToken the collateralToken to check
@@ -442,6 +458,20 @@ library GmxKeys {
             market
         ));
     }
+
+    // @dev key for open interest reserve factor
+    // @param market the market to check
+    // @param isLong whether to get the key for the long or short side
+    // @return key for open interest reserve factor
+    function openInterestReserveFactorKey(address market, bool isLong) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            OPEN_INTEREST_RESERVE_FACTOR,
+            market,
+            isLong
+        ));
+    }
+
+    
 }
 
 import {DataStore} from "src/integrations/utilities/DataStore.sol";

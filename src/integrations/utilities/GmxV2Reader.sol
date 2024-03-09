@@ -154,7 +154,10 @@ contract GMXV2Reader is BaseReader {
 
     function getFundingFeesPerSecond(address market) external view returns (bool longsPayShorts, int256 longFunding, int256 shortFunding) {
 
-        (uint256 longInterestUsd, uint256 shortInterestUsd) = _getOpenInterestMarket(market);
+        OpenInterest memory _interest = _getOpenInterestMarket(market);
+        uint256 longInterestUsd = _interest.openInterestLong;
+        uint256 shortInterestUsd = _interest.openInterestShort;
+
         int256 fundingFactor = _gmxDataStore.getInt(GmxKeys.savedFundingFactorPerSecondKey(market));
         
         longsPayShorts = fundingFactor > 0;
@@ -233,7 +236,7 @@ contract GMXV2Reader is BaseReader {
         return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference);
     }
 
-    function _getOpenInterestMarket(address market) internal view returns (uint256 longInterestUsd, uint256 shortInterestUsd) {
+    function _getOpenInterestMarket(address market) internal view returns (OpenInterest memory _interest) {
         Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
         
         uint256 longInterestUsingLongToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, true));
@@ -241,8 +244,14 @@ contract GMXV2Reader is BaseReader {
         uint256 shortInterestUsingLongToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, false));
         uint256 shortInterestUsingShortToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, false));
         
-        longInterestUsd = longInterestUsingLongToken + longInterestUsingShortToken;
-        shortInterestUsd = shortInterestUsingLongToken + shortInterestUsingShortToken;
+        _interest = OpenInterest({
+            openInterestLong:longInterestUsingLongToken + longInterestUsingShortToken,
+            openInterestShort: shortInterestUsingLongToken + shortInterestUsingShortToken,
+            maxOpenInterestLong: _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, true)),
+            maxOpenInterestShort: _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, false)),
+            openInterestReserveLong: _gmxDataStore.getUint(GmxKeys.openInterestReserveFactorKey(market, true)),
+            openInterestReserveShort: _gmxDataStore.getUint(GmxKeys.openInterestReserveFactorKey(market, false))
+        });
     }
 }
 
