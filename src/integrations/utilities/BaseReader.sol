@@ -6,14 +6,20 @@ import {IDataStore} from "src/integrations/utilities/interfaces/IDataStore.sol";
 
 abstract contract BaseReader {
     
-    // address constant _amplifyDataStore = address(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
     IDataStore constant amplifyDataStore = IDataStore(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
 
-    struct Fees {
+    struct PositionFeesAccrued {
         uint256 executionFee;
         uint256 fundingFee;
         uint256 borrowFee;
-        uint256 priceImpact; // ?
+        uint256 priceImpact; 
+    }
+
+    struct FeesRates {
+        uint256 borrowingForLongs;
+        uint256 borrowingForShorts;
+        uint256 fundingForLongs;
+        uint256 fundingForShorts;
     }
 
     struct PositionData {
@@ -30,7 +36,9 @@ abstract contract BaseReader {
     // executionFee (from our datastore)
     // fundingFee/borrowFee per second/hour from GMX
     // priceImpact not sure how this goes, need to look into
-    function getFees(bytes32 _routeTypeKey, address _trader) virtual public view returns (Fees memory _fees);
+    function getAccruedFees(bytes32 _routeTypeKey, address _trader) virtual public view returns (PositionFeesAccrued memory _fees);
+
+    function getFeesPerSecond(address _market) virtual public view returns (FeesRates memory _fees);
 
     // available liq in usd with 30 decimals
     function getAvailableLiquidity(bytes32 _routeTypeKey, address _trader) virtual public view returns (uint256 _longTokenUsd, uint256 _shortTokenUsd);

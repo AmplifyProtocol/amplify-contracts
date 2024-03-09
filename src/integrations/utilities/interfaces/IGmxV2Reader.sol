@@ -413,6 +413,37 @@ library ReaderPricingUtils {
     }
 }
 
+library GmxKeys {
+    // @dev key for saved funding factor
+    bytes32 public constant SAVED_FUNDING_FACTOR_PER_SECOND = keccak256(abi.encode("SAVED_FUNDING_FACTOR_PER_SECOND"));
+
+    // @dev key for open interest
+    bytes32 public constant OPEN_INTEREST = keccak256(abi.encode("OPEN_INTEREST"));
+    
+    // @dev key for open interest
+    // @param market the market to check
+    // @param collateralToken the collateralToken to check
+    // @param isLong whether to check the long or short open interest
+    // @return key for open interest
+    function openInterestKey(address market, address collateralToken, bool isLong) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            OPEN_INTEREST,
+            market,
+            collateralToken,
+            isLong
+        ));
+    }
+
+    // @dev the key for saved funding factor
+    // @param market the market for the pool
+    function savedFundingFactorPerSecondKey(address market) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            SAVED_FUNDING_FACTOR_PER_SECOND,
+            market
+        ));
+    }
+}
+
 import {DataStore} from "src/integrations/utilities/DataStore.sol";
 
 interface IGMXV2Reader {
