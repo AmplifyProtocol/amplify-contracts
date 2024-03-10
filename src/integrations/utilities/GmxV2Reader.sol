@@ -51,7 +51,7 @@ contract GMXV2Reader is BaseReader {
             indexTokenPriceProps,
             longTokenPriceProps,
             shortTokenPriceProps,
-            keccak256(abi.encode("MAX_PNL_FACTOR")),
+            keccak256(abi.encode("MAX_PNL_FACTOR_FOR_TRADERS")), //this is the PnL factor cap when calculating the market token price for closing a position
             true
         );
         return (marketValueProp.longTokenUsd, marketValueProp.shortTokenUsd);
@@ -276,70 +276,70 @@ contract GMXV2Reader is BaseReader {
     }
 
     //@note work in progress
-    // function getLiquidationPrice(
-    //     IMarketInfo memory marketInfo,
-    //     bool isLong,
-    //     address collateralToken,
-    //     address indexToken,
-    //     uint256 sizeInTokens,
-    //     uint256 sizeInUsd,
-    //     uint256 collateralAmount,
-    //     uint256 collateralUsd,
-    //     uint256 pendingFundingFeesUsd,
-    //     uint256 pendingBorrowingFeesUsd,
-    //     bool useMaxPriceImpact
-    // ) external view returns (uint256 liquidationPrice) {
+    function getLiquidationPrice(
+        IMarketInfo memory marketInfo,
+        bool isLong,
+        address collateralToken,
+        address indexToken,
+        uint256 sizeInTokens,
+        uint256 sizeInUsd,
+        uint256 collateralAmount,
+        uint256 collateralUsd,
+        uint256 pendingFundingFeesUsd,
+        uint256 pendingBorrowingFeesUsd,
+        bool useMaxPriceImpact
+    ) external view returns (uint256 liquidationPrice) {
 
-    //     // TODO: how to retrieve closingFeeUsd ?
-    //     uint256 totalPendingFeesUsd = pendingFundingFeesUsd + pendingBorrowingFeesUsd + closingFeeUsd;
+        // TODO: how to retrieve closingFeeUsd ?
+        uint256 totalPendingFeesUsd = pendingFundingFeesUsd + pendingBorrowingFeesUsd + closingFeeUsd;
 
-    //     uint256 maxPositionImpactFactorForLiquidations = _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(market));
-    //     // uint256 maxNegativePriceImpactUsd = (sizeInUsd * maxPositionImpactFactorForLiquidations) / PRECISION;
-    //     int256 maxNegativePriceImpactUsd = -int256(sizeInUsd * maxPositionImpactFactorForLiquidations);
+        uint256 maxPositionImpactFactorForLiquidations = _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(market));
+        // uint256 maxNegativePriceImpactUsd = (sizeInUsd * maxPositionImpactFactorForLiquidations) / PRECISION;
+        int256 maxNegativePriceImpactUsd = -int256(sizeInUsd * maxPositionImpactFactorForLiquidations);
 
 
-    //     if (useMaxPriceImpact) {
-    //         uint256 priceImpactDeltaUsd = maxNegativePriceImpactUsd;
-    //     } else {
-    //         uint256 priceImpactDeltaUsd = getPriceImpactForPosition(marketInfo, sizeInUsd * (-1), isLong); //figure out how getPriceImpactForPosition works
+        if (useMaxPriceImpact) {
+            uint256 priceImpactDeltaUsd = maxNegativePriceImpactUsd;
+        } else {
+            uint256 priceImpactDeltaUsd = _getPriceImpact(_routeTypeKey, _trader);
 
-    //         if (priceImpactDeltaUsd < maxNegativePriceImpactUsd) {priceImpactDeltaUsd = maxNegativePriceImpactUsd;}
-    //         // Ignore positive price impact
-    //         if (priceImpactDeltaUsd > 0) {priceImpactDeltaUsd = 0;}
-    //     }
+            if (priceImpactDeltaUsd < maxNegativePriceImpactUsd) {priceImpactDeltaUsd = maxNegativePriceImpactUsd;}
+            // Ignore positive price impact
+            if (priceImpactDeltaUsd > 0) {priceImpactDeltaUsd = 0;}
+        }
 
-    //     uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(market));
-    //     uint256 liquidationCollateralUsd = sizeInUsd * minCollateralFactor;
+        uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(market)); // This determines the minimum allowed ratio of (position collateral) / (position size)
+        uint256 liquidationCollateralUsd = sizeInUsd * minCollateralFactor;
 
-    //     uint256 indexTokenDenominator ; //TODO: retrieve index token denominator
+        uint256 indexTokenDenominator ; //TODO: retrieve index token denominator
 
-    //     if (collateralToken == indexToken) {
-    //         if (isLong) {
-    //             uint256 denominator = sizeInTokens + collateralAmount;
-    //             if (denominator == 0) return 0;
+        if (collateralToken == indexToken) {
+            if (isLong) {
+                uint256 denominator = sizeInTokens + collateralAmount;
+                if (denominator == 0) return 0;
 
-    //             liquidationPrice = ((sizeInUsd + liquidationCollateralUsd - priceImpactDeltaUsd + totalFeesUsd) * indexTokenDenominator) / denominator;
-    //         } else {
-    //             uint256 denominator = sizeInTokens - collateralAmount;
-    //             if (denominator == 0) return 0;
+                liquidationPrice = ((sizeInUsd + liquidationCollateralUsd - priceImpactDeltaUsd + totalFeesUsd) * indexTokenDenominator) / denominator;
+            } else {
+                uint256 denominator = sizeInTokens - collateralAmount;
+                if (denominator == 0) return 0;
 
-    //             liquidationPrice = ((sizeInUsd - liquidationCollateralUsd + priceImpactDeltaUsd - totalFeesUsd) * indexTokenDenominator) / denominator;
-    //         }
-    //     } else {
-    //         if (sizeInTokens == 0) return 0;
-    //         uint256 remainingCollateralUsd = collateralUsd + priceImpactDeltaUsd - totalPendingFeesUsd - closingFeeUsd;
+                liquidationPrice = ((sizeInUsd - liquidationCollateralUsd + priceImpactDeltaUsd - totalFeesUsd) * indexTokenDenominator) / denominator;
+            }
+        } else {
+            if (sizeInTokens == 0) return 0;
+            uint256 remainingCollateralUsd = collateralUsd + priceImpactDeltaUsd - totalPendingFeesUsd - closingFeeUsd;
 
-    //         if (isLong) {
-    //             liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd + sizeInUsd) * indexTokenDenominator) / sizeInTokens;
-    //         } else {
-    //             liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd - sizeInUsd) * indexTokenDenominator) / sizeInTokens;
-    //         }
-    //     }
+            if (isLong) {
+                liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd + sizeInUsd) * indexTokenDenominator) / sizeInTokens;
+            } else {
+                liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd - sizeInUsd) * indexTokenDenominator) / sizeInTokens;
+            }
+        }
 
-    //     if (liquidationPrice <= 0) return 0;
+        if (liquidationPrice <= 0) return 0;
 
-    //     return liquidationPrice;
-    // }
+        return liquidationPrice;
+    }
 }
 
 
