@@ -272,7 +272,7 @@ contract GMXV2Reader is BaseReader {
         // TODO: how to retrieve closingFeeUsd ?
         uint256 totalPendingFeesUsd = pendingFundingFeesUsd + pendingBorrowingFeesUsd + closingFeeUsd;
 
-        // function maxPositionImpactFactorForLiquidationsKey(address market) internal pure returns (bytes32)
+        uint256 maxPositionImpactFactorForLiquidations = _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(market));
         uint256 maxNegativePriceImpactUsd = (sizeInUsd * maxPositionImpactFactorForLiquidations) / PRECISION;
 
         if (useMaxPriceImpact) {
@@ -285,7 +285,7 @@ contract GMXV2Reader is BaseReader {
             if (priceImpactDeltaUsd > 0) {priceImpactDeltaUsd = 0;}
         }
 
-        // function minCollateralFactorKey(address market) internal pure returns (bytes32)
+        uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(market));
         uint256 liquidationCollateralUsd = sizeInUsd * minCollateralFactor/ PRECISION;
 
         uint256 indexTokenDenominator ; //TODO: retrieve index token denominator
@@ -317,7 +317,6 @@ contract GMXV2Reader is BaseReader {
 
         return liquidationPrice;
     }
-
 }
 
 
