@@ -17,7 +17,7 @@ pragma solidity 0.8.23;
 
 import {GMXV2Keys} from "../../../../../src/integrations/GMXV2/libraries/GMXV2Keys.sol";
 import {GMXV2OrchestratorHelper} from "src/integrations/GMXV2/libraries/GMXV2OrchestratorHelper.sol";
-import {IGMXV2Reader, Market, Price, MarketPoolValueInfo, Position, MarketUtils, ReaderUtils, GmxKeys} from "src/integrations/utilities/interfaces/IGmxV2Reader.sol";
+import {IGMXV2Reader, Market, Price, MarketPoolValueInfo, Position, MarketUtils, ReaderUtils, GmxKeys, ReaderPricingUtils} from "src/integrations/utilities/interfaces/IGmxV2Reader.sol";
 import {DataStore} from "src/integrations/utilities/DataStore.sol";
 import "./BaseReader.sol";
 
@@ -93,7 +93,7 @@ contract GMXV2Reader is BaseReader {
             executionFee: 0, // To be added
             fundingFee: _getFundingFee(_routeTypeKey, _trader),
             borrowFee: _getAccruedBorrowingFee(_routeTypeKey, _trader),
-            priceImpact: 0 // To be added
+            priceImpact: _getPriceImpact(_routeTypeKey, _trader)
          });
     }
 
@@ -172,6 +172,7 @@ contract GMXV2Reader is BaseReader {
             shortFunding = factorPerSecondA / 1e20;
         }
     }
+    
 
     function getLiquidationPrice(bytes32 _routeTypeKey, uint256 acceptablePrice, uint256 triggerPrice) override public view returns (uint256 _liquidationPrice) {}
 
@@ -254,69 +255,91 @@ contract GMXV2Reader is BaseReader {
         });
     }
 
-    //@note work in progress
-    function getLiquidationPrice(
-        IMarketInfo memory marketInfo,
-        bool isLong,
-        address collateralToken,
-        address indexToken,
-        uint256 sizeInTokens,
-        uint256 sizeInUsd,
-        uint256 collateralAmount,
-        uint256 collateralUsd,
-        uint256 pendingFundingFeesUsd,
-        uint256 pendingBorrowingFeesUsd,
-        bool useMaxPriceImpact
-    ) external view returns (uint256 liquidationPrice) {
+    function _getPriceImpact(bytes32 _routeTypeKey, address _trader) internal view returns (uint256) { 
+        PositionData memory _position = getPosition(_routeTypeKey, _trader);
 
-        // TODO: how to retrieve closingFeeUsd ?
-        uint256 totalPendingFeesUsd = pendingFundingFeesUsd + pendingBorrowingFeesUsd + closingFeeUsd;
+        Market.Props memory marketProps = reader.getMarket(gmxDataStore, _position.market);
+        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
+        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
 
-        uint256 maxPositionImpactFactorForLiquidations = _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(market));
-        uint256 maxNegativePriceImpactUsd = (sizeInUsd * maxPositionImpactFactorForLiquidations) / PRECISION;
+        ReaderPricingUtils.ExecutionPriceResult memory _executionPrice = reader.getExecutionPrice(
+            gmxDataStore, 
+            _position.market, 
+            indexTokenPriceProps, 
+            _position.sizeInUsd, 
+            _position.sizeInTokens,  
+            int256(_position.sizeInUsd) * (-1), //position size delta
+            _position.isLong
+            );
 
-        if (useMaxPriceImpact) {
-            uint256 priceImpactDeltaUsd = maxNegativePriceImpactUsd;
-        } else {
-            uint256 priceImpactDeltaUsd = getPriceImpactForPosition(marketInfo, sizeInUsd.mul(-1), isLong); //figure out how getPriceImpactForPosition works
-
-            if (priceImpactDeltaUsd < maxNegativePriceImpactUsd) {priceImpactDeltaUsd = maxNegativePriceImpactUsd;}
-            // Ignore positive price impact
-            if (priceImpactDeltaUsd > 0) {priceImpactDeltaUsd = 0;}
-        }
-
-        uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(market));
-        uint256 liquidationCollateralUsd = sizeInUsd * minCollateralFactor/ PRECISION;
-
-        uint256 indexTokenDenominator ; //TODO: retrieve index token denominator
-
-        if (collateralToken == indexToken) {
-            if (isLong) {
-                uint256 denominator = sizeInTokens + collateralAmount;
-                if (denominator == 0) return 0;
-
-                liquidationPrice = ((sizeInUsd + liquidationCollateralUsd - priceImpactDeltaUsd + totalFeesUsd) * indexTokenDenominator) / denominator;
-            } else {
-                uint256 denominator = sizeInTokens - collateralAmount;
-                if (denominator == 0) return 0;
-
-                liquidationPrice = ((sizeInUsd - liquidationCollateralUsd + priceImpactDeltaUsd - totalFeesUsd) * indexTokenDenominator) / denominator;
-            }
-        } else {
-            if (sizeInTokens == 0) return 0;
-            uint256 remainingCollateralUsd = collateralUsd + priceImpactDeltaUsd - totalPendingFeesUsd - closingFeeUsd;
-
-            if (isLong) {
-                liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd + sizeInUsd) * indexTokenDenominator) / sizeInTokens;
-            } else {
-                liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd - sizeInUsd) * indexTokenDenominator) / sizeInTokens;
-            }
-        }
-
-        if (liquidationPrice <= 0) return 0;
-
-        return liquidationPrice;
+        return uint256(_executionPrice.priceImpactUsd);
     }
+
+    //@note work in progress
+    // function getLiquidationPrice(
+    //     IMarketInfo memory marketInfo,
+    //     bool isLong,
+    //     address collateralToken,
+    //     address indexToken,
+    //     uint256 sizeInTokens,
+    //     uint256 sizeInUsd,
+    //     uint256 collateralAmount,
+    //     uint256 collateralUsd,
+    //     uint256 pendingFundingFeesUsd,
+    //     uint256 pendingBorrowingFeesUsd,
+    //     bool useMaxPriceImpact
+    // ) external view returns (uint256 liquidationPrice) {
+
+    //     // TODO: how to retrieve closingFeeUsd ?
+    //     uint256 totalPendingFeesUsd = pendingFundingFeesUsd + pendingBorrowingFeesUsd + closingFeeUsd;
+
+    //     uint256 maxPositionImpactFactorForLiquidations = _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(market));
+    //     // uint256 maxNegativePriceImpactUsd = (sizeInUsd * maxPositionImpactFactorForLiquidations) / PRECISION;
+    //     int256 maxNegativePriceImpactUsd = -int256(sizeInUsd * maxPositionImpactFactorForLiquidations);
+
+
+    //     if (useMaxPriceImpact) {
+    //         uint256 priceImpactDeltaUsd = maxNegativePriceImpactUsd;
+    //     } else {
+    //         uint256 priceImpactDeltaUsd = getPriceImpactForPosition(marketInfo, sizeInUsd * (-1), isLong); //figure out how getPriceImpactForPosition works
+
+    //         if (priceImpactDeltaUsd < maxNegativePriceImpactUsd) {priceImpactDeltaUsd = maxNegativePriceImpactUsd;}
+    //         // Ignore positive price impact
+    //         if (priceImpactDeltaUsd > 0) {priceImpactDeltaUsd = 0;}
+    //     }
+
+    //     uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(market));
+    //     uint256 liquidationCollateralUsd = sizeInUsd * minCollateralFactor;
+
+    //     uint256 indexTokenDenominator ; //TODO: retrieve index token denominator
+
+    //     if (collateralToken == indexToken) {
+    //         if (isLong) {
+    //             uint256 denominator = sizeInTokens + collateralAmount;
+    //             if (denominator == 0) return 0;
+
+    //             liquidationPrice = ((sizeInUsd + liquidationCollateralUsd - priceImpactDeltaUsd + totalFeesUsd) * indexTokenDenominator) / denominator;
+    //         } else {
+    //             uint256 denominator = sizeInTokens - collateralAmount;
+    //             if (denominator == 0) return 0;
+
+    //             liquidationPrice = ((sizeInUsd - liquidationCollateralUsd + priceImpactDeltaUsd - totalFeesUsd) * indexTokenDenominator) / denominator;
+    //         }
+    //     } else {
+    //         if (sizeInTokens == 0) return 0;
+    //         uint256 remainingCollateralUsd = collateralUsd + priceImpactDeltaUsd - totalPendingFeesUsd - closingFeeUsd;
+
+    //         if (isLong) {
+    //             liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd + sizeInUsd) * indexTokenDenominator) / sizeInTokens;
+    //         } else {
+    //             liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd - sizeInUsd) * indexTokenDenominator) / sizeInTokens;
+    //         }
+    //     }
+
+    //     if (liquidationPrice <= 0) return 0;
+
+    //     return liquidationPrice;
+    // }
 }
 
 
@@ -454,3 +477,67 @@ contract GMXV2Reader is BaseReader {
 
 //   return liquidationPrice
 // }
+
+// ==== LIQUIDATION V2 ====
+
+// function getLiquidationPrice(bool isLong, uint collateral, uint size, uint averagePrice) public pure returns (uint) {
+//     uint liquidationAmount = size / MAX_LEVERAGE;
+//     uint liquidationDelta = collateral - liquidationAmount;
+//     uint priceDelta = (liquidationDelta * averagePrice) / size;
+    
+//     if (isLong) {
+//         return averagePrice - priceDelta;
+//     } else {
+//         return averagePrice + priceDelta;
+//     }
+// }
+
+// ===== PRICE IMPACT =====
+
+// using closing of long positions as an example
+        // realized pnl is calculated as totalPositionPnl * sizeDeltaInTokens / position.sizeInTokens
+        // totalPositionPnl: position.sizeInTokens * executionPrice - position.sizeInUsd
+        // sizeDeltaInTokens: position.sizeInTokens * sizeDeltaUsd / position.sizeInUsd
+        // realized pnl: (position.sizeInTokens * executionPrice - position.sizeInUsd) * (position.sizeInTokens * sizeDeltaUsd / position.sizeInUsd) / position.sizeInTokens
+        // realized pnl: (position.sizeInTokens * executionPrice - position.sizeInUsd) * (sizeDeltaUsd / position.sizeInUsd)
+        // priceImpactUsd should adjust the execution price such that:
+        // [(position.sizeInTokens * executionPrice - position.sizeInUsd) * (sizeDeltaUsd / position.sizeInUsd)] -
+        // [(position.sizeInTokens * price - position.sizeInUsd) * (sizeDeltaUsd / position.sizeInUsd)] = priceImpactUsd
+        //
+        // (position.sizeInTokens * executionPrice - position.sizeInUsd) - (position.sizeInTokens * price - position.sizeInUsd)
+        // = priceImpactUsd / (sizeDeltaUsd / position.sizeInUsd)
+        // = priceImpactUsd * position.sizeInUsd / sizeDeltaUsd
+        //
+        // position.sizeInTokens * executionPrice - position.sizeInTokens * price = priceImpactUsd * position.sizeInUsd / sizeDeltaUsd
+        // position.sizeInTokens * (executionPrice - price) = priceImpactUsd * position.sizeInUsd / sizeDeltaUsd
+        // executionPrice - price = (priceImpactUsd * position.sizeInUsd) / (sizeDeltaUsd * position.sizeInTokens)
+        // executionPrice = price + (priceImpactUsd * position.sizeInUsd) / (sizeDeltaUsd * position.sizeInTokens)
+        // executionPrice = price + (priceImpactUsd / sizeDeltaUsd) * (position.sizeInUsd / position.sizeInTokens)
+        // executionPrice = price + (priceImpactUsd * position.sizeInUsd / position.sizeInTokens) / sizeDeltaUsd
+        //
+        // e.g. if price is $2000, sizeDeltaUsd is $5000, priceImpactUsd is -$1000, position.sizeInUsd is $10,000, position.sizeInTokens is 5
+        // executionPrice = 2000 + (-1000 * 10,000 / 5) / 5000 = 1600
+        // realizedPnl based on price, without price impact: 0
+        // realizedPnl based on executionPrice, with price impact: (5 * 1600 - 10,000) * (5 * 5000 / 10,000) / 5 => -1000
+
+        // a positive adjustedPriceImpactUsd would decrease the executionPrice
+        // a negative adjustedPriceImpactUsd would increase the executionPrice
+
+        // for increase orders, the adjustedPriceImpactUsd is added to the divisor
+        // a positive adjustedPriceImpactUsd would increase the divisor and decrease the executionPrice
+        // increase long order:
+        //      - if price impact is positive, adjustedPriceImpactUsd should be positive, to decrease the executionPrice
+        //      - if price impact is negative, adjustedPriceImpactUsd should be negative, to increase the executionPrice
+        // increase short order:
+        //      - if price impact is positive, adjustedPriceImpactUsd should be negative, to increase the executionPrice
+        //      - if price impact is negative, adjustedPriceImpactUsd should be positive, to decrease the executionPrice
+
+        // for decrease orders, the adjustedPriceImpactUsd adjusts the numerator
+        // a positive adjustedPriceImpactUsd would increase the divisor and increase the executionPrice
+        // decrease long order:
+        //      - if price impact is positive, adjustedPriceImpactUsd should be positive, to increase the executionPrice
+        //      - if price impact is negative, adjustedPriceImpactUsd should be negative, to decrease the executionPrice
+        // decrease short order:
+        //      - if price impact is positive, adjustedPriceImpactUsd should be negative, to decrease the executionPrice
+        //      - if price impact is negative, adjustedPriceImpactUsd should be positive, to increase the executionPrice
+        // adjust price by price impact

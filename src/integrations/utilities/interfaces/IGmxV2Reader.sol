@@ -595,24 +595,24 @@ interface IGMXV2Reader {
     //     address uiFeeReceiver
     // ) external view returns (uint256, int256, SwapPricingUtils.SwapFees memory fees);
 
-    // function getExecutionPrice(
-    //     DataStore dataStore,
-    //     address marketKey,
-    //     Price.Props memory indexTokenPrice,
-    //     uint256 positionSizeInUsd,
-    //     uint256 positionSizeInTokens,
-    //     int256 sizeDeltaUsd,
-    //     bool isLong
-    // ) external view returns (ReaderPricingUtils.ExecutionPriceResult memory);
-
-    function getSwapPriceImpact(
+    function getExecutionPrice(
         DataStore dataStore,
         address marketKey,
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        Price.Props memory tokenInPrice,
-        Price.Props memory tokenOutPrice
-    ) external view returns (int256, int256);
+        Price.Props memory indexTokenPrice,
+        uint256 positionSizeInUsd,
+        uint256 positionSizeInTokens,
+        int256 sizeDeltaUsd,
+        bool isLong
+    ) external view returns (ReaderPricingUtils.ExecutionPriceResult memory);
+
+    // function getSwapPriceImpact(
+    //     DataStore dataStore,
+    //     address marketKey,
+    //     address tokenIn,
+    //     address tokenOut,
+    //     uint256 amountIn,
+    //     Price.Props memory tokenInPrice,
+    //     Price.Props memory tokenOutPrice
+    // ) external view returns (int256, int256);
 
 }
