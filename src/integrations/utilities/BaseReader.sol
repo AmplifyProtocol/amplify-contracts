@@ -8,11 +8,12 @@ abstract contract BaseReader {
     
     IDataStore constant amplifyDataStore = IDataStore(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
 
-    struct PositionFeesAccrued {
-        uint256 executionFee;
-        uint256 fundingFee;
-        uint256 borrowFee;
-        uint256 priceImpact; 
+    struct FeesAccrued {
+        int256 executionFee;
+        int256 fundingFee;
+        int256 borrowFee;
+        int256 priceImpact;
+        int256 closeFee; 
     }
 
     struct FeesRates {
@@ -45,7 +46,7 @@ abstract contract BaseReader {
     // executionFee (from our datastore)
     // fundingFee/borrowFee per second/hour from GMX
     // priceImpact not sure how this goes, need to look into
-    function getAccruedFees(bytes32 _routeTypeKey, address _trader) virtual public view returns (PositionFeesAccrued memory _fees);
+    function getAccruedFees(bytes32 _routeTypeKey, address _trader) virtual public view returns (FeesAccrued memory _fees);
 
     function getFeesPerSecond(address _market) virtual public view returns (FeesRates memory _fees);
 
