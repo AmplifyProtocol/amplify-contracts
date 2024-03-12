@@ -426,6 +426,12 @@ library GmxKeys {
     // @dev key for open interest reserve factor
     bytes32 public constant OPEN_INTEREST_RESERVE_FACTOR = keccak256(abi.encode("OPEN_INTEREST_RESERVE_FACTOR"));
 
+     // @dev key for the max position impact factor for liquidations
+    bytes32 public constant MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATIONS = keccak256(abi.encode("MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATIONS"));
+
+    // @dev key for the min collateral factor
+    bytes32 public constant MIN_COLLATERAL_FACTOR = keccak256(abi.encode("MIN_COLLATERAL_FACTOR"));
+    
     // @dev the key for the max open interest
     // @param market the market for the pool
     // @param isLong whether the key is for the long or short side
@@ -471,6 +477,24 @@ library GmxKeys {
         ));
     }
 
+    // @dev key for the max position impact factor for liquidations
+    // @param market the market address to check
+    // @return key for the max position impact factor
+    function maxPositionImpactFactorForLiquidationsKey(address market) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATIONS,
+            market
+        ));
+    }
+
+    // @dev the min collateral factor key
+    // @param the market for the min collateral factor
+    function minCollateralFactorKey(address market) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            MIN_COLLATERAL_FACTOR,
+            market
+        ));
+    }
     
 }
 

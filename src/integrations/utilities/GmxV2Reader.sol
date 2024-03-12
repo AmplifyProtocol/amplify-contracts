@@ -277,7 +277,7 @@ contract GMXV2Reader is BaseReader {
     }
 
     //@note work in progress
-    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader)  external view returns (uint256 liquidationPrice) {
+    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader)  external view returns (int256 liquidationPrice) {
 
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
         
@@ -287,11 +287,11 @@ contract GMXV2Reader is BaseReader {
         int256 totalPendingFeesUsd = _fees.fundingFee + _fees.borrowFee + _fees.closeFee;
 
         uint256 maxPositionImpactFactorForLiquidations = _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market));
-        int256 maxNegativePriceImpactUsd = (-1) * int256(_position.sizeUsd * maxPositionImpactFactorForLiquidations);
+        int256 maxNegativePriceImpactUsd = (-1) * int256(_position.sizeInUsd * maxPositionImpactFactorForLiquidations);
 
-        bool useMaxPriceImpact = true; // to consider
+        bool useMaxPriceImpact = true; // might be different options here
         
-        uint256 priceImpactDeltaUsd;
+        int256 priceImpactDeltaUsd;
         if (useMaxPriceImpact) {
             priceImpactDeltaUsd = maxNegativePriceImpactUsd;
         } else {
@@ -303,30 +303,30 @@ contract GMXV2Reader is BaseReader {
         }
 
         uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market)); // This determines the minimum allowed ratio of (position collateral) / (position size)
-        uint256 liquidationCollateralUsd = _position.sizeUsd * minCollateralFactor;
+        uint256 liquidationCollateralUsd = _position.sizeInUsd * minCollateralFactor;
 
-        uint256 indexTokenDenominator ; //TODO: retrieve index token denominator
+        int256 indexTokenDenominator ; //TODO: retrieve index token denominator
 
         if (_position.collateralToken == _marketProps.indexToken) {
             if (_position.isLong) {
                 uint256 denominator = _position.sizeInTokens + _position.collateralAmount;
                 if (denominator == 0) return 0;
 
-                liquidationPrice = (_position.sizeUsd + liquidationCollateralUsd - priceImpactDeltaUsd + totalPendingFeesUsd) / denominator * indexTokenDenominator;
+                liquidationPrice = (int256(_position.sizeInUsd) + int256(liquidationCollateralUsd) - priceImpactDeltaUsd + totalPendingFeesUsd) / int256(denominator) * indexTokenDenominator;
             } else {
                 uint256 denominator = _position.sizeInTokens - _position.collateralAmount;
                 if (denominator == 0) return 0;
 
-                liquidationPrice = (_position.sizeUsd - liquidationCollateralUsd + priceImpactDeltaUsd - totalPendingFeesUsd) / denominator * indexTokenDenominator;
+                liquidationPrice = (int256(_position.sizeInUsd) - int256(liquidationCollateralUsd) + priceImpactDeltaUsd - totalPendingFeesUsd) / int256(denominator) * indexTokenDenominator;
             }
         } else {
             if (_position.sizeInTokens == 0) return 0;
-            uint256 remainingCollateralUsd = _position.collateralAmount + priceImpactDeltaUsd - totalPendingFeesUsd - _fees.closingFeeUsd;
+            int256 remainingCollateralUsd = int256(_position.collateralAmount) + priceImpactDeltaUsd - totalPendingFeesUsd - _fees.closeFee;
 
             if (_position.isLong) {
-                liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd + _position.sizeUsd) * indexTokenDenominator) / _position.sizeInTokens;
+                liquidationPrice = ((int256(liquidationCollateralUsd) - remainingCollateralUsd + int256(_position.sizeInUsd)) * indexTokenDenominator) / int256(_position.sizeInTokens);
             } else {
-                liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd - _position.sizeUsd) * indexTokenDenominator) / (-1 * _position.sizeInTokens);
+                liquidationPrice = ((int256(liquidationCollateralUsd) - remainingCollateralUsd - int256(_position.sizeInUsd)) * indexTokenDenominator) / (-1 * int256(_position.sizeInTokens));
             }
         }
 
