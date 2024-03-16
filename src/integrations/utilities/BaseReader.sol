@@ -57,7 +57,7 @@ abstract contract BaseReader {
     function getOpenInterest(bytes32 _routeTypeKey, address _trader) virtual public view returns (uint256 _longIO, uint256 _shortIO);
 
     // need to look how gmx calcs that
-    function getLiquidationPrice(bytes32 _routeTypeKey, uint256 acceptablePrice, uint256 triggerPrice) virtual public view returns (uint256 _liquidationPrice);
+    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) virtual public view returns (int256 _liquidationPrice);
 
     // price in usd with 30 decimals
     function getPrice(address _token) virtual public view returns (uint256 _price);
