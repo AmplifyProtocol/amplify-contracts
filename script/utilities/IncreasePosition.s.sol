@@ -9,7 +9,7 @@ import "test/copyTrading/GMXV2/BaseGMXV2.t.sol";
 import "./DeployerUtilities.sol";
 
 // ---- Usage ----
-// forge script script/utilities/IncreasePosition.s.sol:IncreasePosition --rpc-url https://arbitrum-mainnet.infura.io/v3/6175c5e376b9460eaa23997ac6eccabc --broadcast
+// forge script script/utilities/IncreasePosition.s.sol:IncreasePosition --rpc-url $ARBITRUM_RPC_URL --chain 4216138 --sender $TRADER_ADDRESS --broadcast
 
 contract IncreasePosition is DeployerUtilities {
 
@@ -28,8 +28,8 @@ contract IncreasePosition is DeployerUtilities {
     address _collateralToken = _weth;
     bool _isLong = true;
 
-    uint256 _sizeAdjustment = 15;
-    uint256 _collateralAdjustment = 5;
+    uint256 _sizeAdjustment = 25;
+    uint256 _collateralAdjustment = 10;
 
     function run() public {
         vm.startBroadcast(_privateKey);
@@ -83,6 +83,6 @@ contract IncreasePosition is DeployerUtilities {
         console.logBytes32(_requestKey);
         }
 
-        vm.stopPrank();
+        vm.stopBroadcast();
     }
 }
