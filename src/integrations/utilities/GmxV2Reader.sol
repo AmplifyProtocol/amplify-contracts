@@ -15,7 +15,7 @@ pragma solidity 0.8.23;
 
 // ==============================================================
 
-import {GMXV2Keys} from "../../../../../src/integrations/GMXV2/libraries/GMXV2Keys.sol";
+import {GMXV2Keys} from "src/integrations/GMXV2/libraries/GMXV2Keys.sol";
 import {GMXV2OrchestratorHelper} from "src/integrations/GMXV2/libraries/GMXV2OrchestratorHelper.sol";
 import {IGMXV2Reader, Market, Price, MarketPoolValueInfo, Position, MarketUtils, ReaderUtils, GmxKeys, ReaderPricingUtils} from "src/integrations/utilities/interfaces/IGmxV2Reader.sol";
 import {DataStore} from "src/integrations/utilities/DataStore.sol";
