@@ -37,13 +37,14 @@ contract IncreasePosition is DeployerUtilities ,BaseGMXV2 {
         bytes32 _routeTypeKey = Keys.routeTypeKey(_collateralToken, _indexToken, _isLong, _ethLongMarketData);
         bytes32 _routeKey = _gmxOrchestrator.registerRoute(_routeTypeKey);
         
+        console.log(_trader);
         console.logBytes32(_routeTypeKey);
         console.logBytes32(_routeKey);
 
         //=================================
         uint256 _sizeDelta = _sizeAdjustment * 1e30; // $50
         uint256 _amountInTrader = _collateralAdjustment * 1e18 * 1e30 / _gmxOrchestrator.getPrice(_collateralToken); // $10 in ETH
-
+        {
         IBaseRoute.AdjustPositionParams memory _adjustPositionParams = IBaseRoute.AdjustPositionParams({
             orderType: IBaseRoute.OrderType.MarketIncrease,
             collateralDelta: _amountInTrader,
@@ -69,13 +70,12 @@ contract IncreasePosition is DeployerUtilities ,BaseGMXV2 {
             dexKeeper:  _executionFee,
             puppetKeeper: _executionFee 
         });
-
-        uint256 _totalExecutionFee =  _executionFee * 2;
-
-        bytes32 _requestKey = _gmxOrchestrator.requestPosition{ value: _totalExecutionFee }(_adjustPositionParams, _swapParams, _executionFees, _routeTypeKey, true);
-
+        
+        bytes32 _requestKey = _gmxOrchestrator.requestPosition{ value:  _executionFee * 2 }(_adjustPositionParams, _swapParams, _executionFees, _routeTypeKey, true);
+        
         console.logBytes32(_requestKey);
-
+        }
+        
         vm.stopPrank();
     }
 }
