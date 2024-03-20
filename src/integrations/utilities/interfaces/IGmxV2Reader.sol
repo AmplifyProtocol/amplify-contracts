@@ -414,23 +414,25 @@ library ReaderPricingUtils {
 }
 
 library GmxKeys {
+
     // @dev key for saved funding factor
     bytes32 public constant SAVED_FUNDING_FACTOR_PER_SECOND = keccak256(abi.encode("SAVED_FUNDING_FACTOR_PER_SECOND"));
-
     // @dev key for open interest
     bytes32 public constant OPEN_INTEREST = keccak256(abi.encode("OPEN_INTEREST"));
-
     // @dev key for max open interest
     bytes32 public constant MAX_OPEN_INTEREST = keccak256(abi.encode("MAX_OPEN_INTEREST"));
-    
     // @dev key for open interest reserve factor
     bytes32 public constant OPEN_INTEREST_RESERVE_FACTOR = keccak256(abi.encode("OPEN_INTEREST_RESERVE_FACTOR"));
-
      // @dev key for the max position impact factor for liquidations
     bytes32 public constant MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATIONS = keccak256(abi.encode("MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATIONS"));
-
     // @dev key for the min collateral factor
     bytes32 public constant MIN_COLLATERAL_FACTOR = keccak256(abi.encode("MIN_COLLATERAL_FACTOR"));
+    // @dev key for pool amount
+    bytes32 public constant POOL_AMOUNT = keccak256(abi.encode("POOL_AMOUNT"));
+    // @dev key for max pool amount
+    bytes32 public constant MAX_POOL_AMOUNT = keccak256(abi.encode("MAX_POOL_AMOUNT"));
+    // @dev key for max pool amount for deposit
+    bytes32 public constant MAX_POOL_AMOUNT_FOR_DEPOSIT = keccak256(abi.encode("MAX_POOL_AMOUNT_FOR_DEPOSIT"));
     
     // @dev the key for the max open interest
     // @param market the market for the pool
@@ -495,6 +497,41 @@ library GmxKeys {
             market
         ));
     }
+
+    // @dev key for amount of tokens in a market's pool
+    // @param market the market to check
+    // @param token the token to check
+    // @return key for amount of tokens in a market's pool
+    function poolAmountKey(address market, address token) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            POOL_AMOUNT,
+            market,
+            token
+        ));
+    }
+
+    // @dev the key for the max amount of pool tokens
+    // @param market the market for the pool
+    // @param token the token for the pool
+    function maxPoolAmountKey(address market, address token) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            MAX_POOL_AMOUNT,
+            market,
+            token
+        ));
+    }
+
+    // @dev the key for the max amount of pool tokens for deposits
+    // @param market the market for the pool
+    // @param token the token for the pool
+    function maxPoolAmountForDepositKey(address market, address token) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            MAX_POOL_AMOUNT_FOR_DEPOSIT,
+            market,
+            token
+        ));
+    }
+
     
 }
 

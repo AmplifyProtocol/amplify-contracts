@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.23;
 
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Keys} from "src/integrations/libraries/Keys.sol";
 import {IDataStore} from "src/integrations/utilities/interfaces/IDataStore.sol";
+import {CommonHelper} from "src/integrations/libraries/RouteSetter.sol";
 
 abstract contract BaseReader {
     
@@ -33,12 +35,10 @@ abstract contract BaseReader {
     }
 
     struct OpenInterest {
-        uint256 openInterestLong;
-        uint256 openInterestShort;
-        uint256 maxOpenInterestLong;
-        uint256 maxOpenInterestShort;
-        uint256 openInterestReserveLong;
-        uint256 openInterestReserveShort;
+        uint256 longOI;
+        uint256 shortOI;
+        uint256 maxLongOI;
+        uint256 maxShortOI;
     }
 
     // Market Data
@@ -54,7 +54,7 @@ abstract contract BaseReader {
     function getAvailableLiquidity(bytes32 _routeTypeKey, address _trader) virtual public view returns (uint256 _longTokenUsd, uint256 _shortTokenUsd);
 
     // short/long open interest in usd with 30 decimals
-    function getOpenInterest(bytes32 _routeTypeKey, address _trader) virtual public view returns (uint256 _longIO, uint256 _shortIO);
+    function getOpenInterest(bytes32 _routeTypeKey, address _trader) virtual public view returns (OpenInterest memory _openInterest);
 
     // need to look how gmx calcs that
     function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) virtual public view returns (int256 _liquidationPrice);

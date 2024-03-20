@@ -32,56 +32,81 @@ contract GMXV2Reader is BaseReader {
     // View Functions
     // ============================================================================================
 
-    function getAvailableLiquidity(bytes32 _routeTypeKey, address _trader) override public view returns (uint256 _longTokenUsd, uint256 _shortTokenUsd) {
+    function getAvailableLiquidity(bytes32 _routeTypeKey, address _trader) override public view returns (uint256, uint256) {
         (,address market) =  _getMarket(_routeTypeKey, _trader);
 
         Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
 
-        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
-        uint256 longTokenPrice = getPrice(marketProps.longToken);
-        uint256 shortTokenPrice = getPrice(marketProps.shortToken);
+        uint256 _longTokenAmount = _gmxDataStore.getUint(GmxKeys.poolAmountKey(market, marketProps.longToken));
+        uint256 _shortTokenAmount = _gmxDataStore.getUint(GmxKeys.poolAmountKey(market, marketProps.shortToken));
 
-        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
-        Price.Props memory longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
-        Price.Props memory shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
+        uint256 _longTokenPrice = getPrice(marketProps.longToken);
+        uint256 _shortTokenPrice = getPrice(marketProps.shortToken);
 
-        (,MarketPoolValueInfo.Props memory marketValueProp) = reader.getMarketTokenPrice(
-            gmxDataStore,
-            marketProps,
-            indexTokenPriceProps,
-            longTokenPriceProps,
-            shortTokenPriceProps,
-            keccak256(abi.encode("MAX_PNL_FACTOR_FOR_TRADERS")), //this is the PnL factor cap when calculating the market token price for closing a position
-            true
-        );
-        return (marketValueProp.longTokenUsd, marketValueProp.shortTokenUsd);
+        uint256 _longTokenUsd = _longTokenAmount * _longTokenPrice / (10 ** IERC20Metadata(marketProps.longToken).decimals());
+        uint256 _shortTokenUsd = _shortTokenAmount * _shortTokenPrice/ (10 ** IERC20Metadata(marketProps.shortToken).decimals());
+
+        return (_longTokenUsd, _shortTokenUsd);
+
+        // == ALTERNATIVE WAY ===
+
+        // uint256 indexTokenPrice = getPrice(marketProps.indexToken);
+        // uint256 longTokenPrice = getPrice(marketProps.longToken);
+        // uint256 shortTokenPrice = getPrice(marketProps.shortToken);
+
+        // Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
+        // Price.Props memory longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
+        // Price.Props memory shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
+
+        // (,MarketPoolValueInfo.Props memory marketValueProp) = reader.getMarketTokenPrice(
+        //     gmxDataStore,
+        //     marketProps,
+        //     indexTokenPriceProps,
+        //     longTokenPriceProps,
+        //     shortTokenPriceProps,
+        //     keccak256(abi.encode("MAX_PNL_FACTOR")), 
+        //     true
+        // );
+        // return (marketValueProp.longTokenUsd, marketValueProp.shortTokenUsd);
+    }
+    
+    function getOpenInterest(bytes32 _routeTypeKey, address _trader) override public view returns (OpenInterest memory _openInterest) {
+        (,address market) =  _getMarket(_routeTypeKey, _trader);
+
+        Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
+
+        uint256 _shortTokenLongOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, true));
+        uint256 _shortTokenShortOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, false));
+        uint256 _longTokenLongOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, true));
+        uint256 _longTokenShortOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, false));
+        uint256 _maxOpenInterestLong = _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, true));
+        uint256 _maxOpenInterestShort = _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, false));
+
+        _openInterest = OpenInterest({
+            longOI: _shortTokenLongOI+_longTokenLongOI,
+            shortOI: _shortTokenShortOI+_longTokenShortOI,
+            maxLongOI: _maxOpenInterestLong,
+            maxShortOI: _maxOpenInterestShort
+         });
     }
 
-    function getOpenInterest(bytes32 _routeTypeKey, address _trader) override public view returns (uint256 _longIO, uint256 _shortIO) {
-        (,address market) =  _getMarket(_routeTypeKey, _trader);
+    function getOpenInterest(address market) public view returns (OpenInterest memory _openInterest) {
 
         Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
 
-        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
+        uint256 _shortTokenLongOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, true));
+        uint256 _shortTokenShortOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, false));
+        uint256 _longTokenLongOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, true));
+        uint256 _longTokenShortOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, false));
+        uint256 _maxOpenInterestLong = _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, true));
+        uint256 _maxOpenInterestShort = _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, false));
 
-        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
-
-        (int256 _long) = reader.getOpenInterestWithPnl(
-            gmxDataStore,
-            marketProps,
-            indexTokenPriceProps,
-            true,
-            true
-        );
-
-        (int256 _short) = reader.getOpenInterestWithPnl(
-            gmxDataStore,
-            marketProps,
-            indexTokenPriceProps,
-            false,
-            true
-        );
-        return (uint256(_long), uint256(_short));
+        _openInterest = OpenInterest({
+            longOI: _shortTokenLongOI+_longTokenLongOI,
+            shortOI: _shortTokenShortOI+_longTokenShortOI,
+            maxLongOI: _maxOpenInterestLong,
+            maxShortOI: _maxOpenInterestShort
+         });
     }
 
     function getPrice(address _token) override public view returns (uint256 _price) {
@@ -155,9 +180,9 @@ contract GMXV2Reader is BaseReader {
 
     function getFundingFeesPerSecond(address market) external view returns (bool longsPayShorts, int256 longFunding, int256 shortFunding) {
 
-        OpenInterest memory _interest = _getOpenInterestMarket(market);
-        uint256 longInterestUsd = _interest.openInterestLong;
-        uint256 shortInterestUsd = _interest.openInterestShort;
+        OpenInterest memory _interest = getOpenInterest(market);
+        uint256 longInterestUsd = _interest.longOI;
+        uint256 shortInterestUsd = _interest.shortOI;
 
         int256 fundingFactor = _gmxDataStore.getInt(GmxKeys.savedFundingFactorPerSecondKey(market));
         
@@ -224,11 +249,8 @@ contract GMXV2Reader is BaseReader {
     // ============================================================================================
 
     function _getMarket(bytes32 _routeTypeKey, address _trader) internal view returns (address _route, address _market) {
-        address _collateralToken = gmxDataStore.getAddress(Keys.routeTypeCollateralTokenKey(_routeTypeKey));
-        address _indexToken = gmxDataStore.getAddress(Keys.routeTypeIndexTokenKey(_routeTypeKey));
-        bool _isLong = gmxDataStore.getBool(Keys.routeTypeIsLongKey(_routeTypeKey));
-        bytes32 _routeKey = keccak256(abi.encode(_trader, _collateralToken, _indexToken, _isLong));
-        _route = gmxDataStore.getAddress(Keys.routeAddressKey(_routeKey));
+        bytes32 _routeKey = CommonHelper.routeKey(amplifyDataStore, _trader, _routeTypeKey);
+        _route = CommonHelper.routeAddress(amplifyDataStore, _routeKey);
         return (_route, GMXV2OrchestratorHelper.gmxMarketToken(amplifyDataStore, _route));
     }
 
@@ -280,23 +302,23 @@ contract GMXV2Reader is BaseReader {
         return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference);
     }
 
-    function _getOpenInterestMarket(address market) internal view returns (OpenInterest memory _interest) {
-        Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
+    // function _getOpenInterestMarket(address market) internal view returns (OpenInterest memory _interest) {
+    //     Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
         
-        uint256 longInterestUsingLongToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, true));
-        uint256 longInterestUsingShortToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, true));
-        uint256 shortInterestUsingLongToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, false));
-        uint256 shortInterestUsingShortToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, false));
+    //     uint256 longInterestUsingLongToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, true));
+    //     uint256 longInterestUsingShortToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, true));
+    //     uint256 shortInterestUsingLongToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, false));
+    //     uint256 shortInterestUsingShortToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, false));
         
-        _interest = OpenInterest({
-            openInterestLong:longInterestUsingLongToken + longInterestUsingShortToken,
-            openInterestShort: shortInterestUsingLongToken + shortInterestUsingShortToken,
-            maxOpenInterestLong: _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, true)),
-            maxOpenInterestShort: _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, false)),
-            openInterestReserveLong: _gmxDataStore.getUint(GmxKeys.openInterestReserveFactorKey(market, true)),
-            openInterestReserveShort: _gmxDataStore.getUint(GmxKeys.openInterestReserveFactorKey(market, false))
-        });
-    }
+    //     _interest = OpenInterest({
+    //         openInterestLong:longInterestUsingLongToken + longInterestUsingShortToken,
+    //         openInterestShort: shortInterestUsingLongToken + shortInterestUsingShortToken,
+    //         maxOpenInterestLong: _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, true)),
+    //         maxOpenInterestShort: _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, false)),
+    //         openInterestReserveLong: _gmxDataStore.getUint(GmxKeys.openInterestReserveFactorKey(market, true)),
+    //         openInterestReserveShort: _gmxDataStore.getUint(GmxKeys.openInterestReserveFactorKey(market, false))
+    //     });
+    // }
 
     function _getPriceImpact(bytes32 _routeTypeKey, address _trader) internal view returns (uint256) { 
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
