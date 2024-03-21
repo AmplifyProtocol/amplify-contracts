@@ -11,18 +11,18 @@ abstract contract BaseReader {
     IDataStore constant amplifyDataStore = IDataStore(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
 
     struct FeesAccrued {
-        int256 executionFee;
-        int256 fundingFee;
-        int256 borrowFee;
+        uint256 executionFee;
+        uint256 fundingFee;
+        uint256 borrowFee;
         int256 priceImpact;
-        int256 closeFee; 
+        uint256 closeFee; 
     }
 
     struct FeesRates {
         uint256 borrowingForLongs;
         uint256 borrowingForShorts;
-        uint256 fundingForLongs;
-        uint256 fundingForShorts;
+        int256 fundingForLongs;
+        int256 fundingForShorts;
     }
 
     struct PositionData {
@@ -57,7 +57,7 @@ abstract contract BaseReader {
     function getOpenInterest(bytes32 _routeTypeKey, address _trader) virtual public view returns (OpenInterest memory _openInterest);
 
     // need to look how gmx calcs that
-    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) virtual public view returns (int256 _liquidationPrice);
+    // function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) virtual public view returns (int256 _liquidationPrice);
 
     // price in usd with 30 decimals
     function getPrice(address _token) virtual public view returns (uint256 _price);

@@ -18,6 +18,7 @@ contract GMXV2ReaderTest is BaseGMXV2 {
     
     bytes32 _routeTypeKey = 0xc1513a1f97dd396583308cbc6b016ae90eb062eb1e28f06e00aa8494e629b8f9;
     address _trader = 0x5d2473EB50365C98B4fFc7064B241b77C8c9bB63;
+    address market = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336;
 
     function setUp() public override {
         BaseGMXV2.setUp();
@@ -56,5 +57,26 @@ contract GMXV2ReaderTest is BaseGMXV2 {
         
         console.log("long: ", _longToken/1e30);
         console.log("short: ", _shortToken/1e30);
+    }
+
+    function testGeAccruedFees() view external {
+        
+        GMXV2Reader.FeesAccrued memory _fees = _reader.getAccruedFees(_routeTypeKey, _trader); 
+        
+        console.log("executionFee: ", _fees.executionFee);
+        console.log("fundingFee: ", _fees.fundingFee);
+        console.log("borrowFee: ", _fees.borrowFee);
+        console.log("priceImpact: ", uint256(_fees.priceImpact));
+        console.log("closeFee: ", _fees.closeFee);
+    }
+
+    function testGetFeesPerSecond() view external {
+        
+        GMXV2Reader.FeesRates memory _fees = _reader.getFeesPerSecond(market); 
+        
+        console.log("borrowingForLongs: ", _fees.borrowingForLongs);
+        console.log("borrowingForShorts: ", _fees.borrowingForShorts);
+        console.log("fundingForLongs: ", uint256(_fees.fundingForLongs));
+        console.log("fundingForShorts: ", uint256(_fees.fundingForShorts));
     }
 }       
