@@ -32,12 +32,12 @@ contract GMXV2ReaderTest is BaseGMXV2 {
 
     function testGetOpenInterest() view external {
             
-            GMXV2Reader.OpenInterest memory _openInterest = _reader.getOpenInterest(_routeTypeKey, _trader);
-            
-            console.log("longOI, USD: ", _openInterest.longOI/1e30);
-            console.log("shortOI, USD: ", _openInterest.shortOI/1e30);
-            console.log("maxLongOI, USD: ", _openInterest.maxLongOI/1e30);
-            console.log("maxShortOI, USD: ", _openInterest.maxShortOI/1e30);
+        GMXV2Reader.OpenInterest memory _openInterest = _reader.getOpenInterest(_routeTypeKey, _trader);
+        
+        console.log("longOI, USD: ", _openInterest.longOI/1e30);
+        console.log("shortOI, USD: ", _openInterest.shortOI/1e30);
+        console.log("maxLongOI, USD: ", _openInterest.maxLongOI/1e30);
+        console.log("maxShortOI, USD: ", _openInterest.maxShortOI/1e30);
         }
     
     function testGetPosition() view external {
@@ -63,7 +63,8 @@ contract GMXV2ReaderTest is BaseGMXV2 {
         
         GMXV2Reader.FeesAccrued memory _fees = _reader.getAccruedFees(_routeTypeKey, _trader); 
         
-        console.log("executionFee: ", _fees.executionFee);
+        console.log("executionFeeDex: ", _fees.executionFeeDex);
+        console.log("executionFeeAmplify: ", _fees.executionFeeAmplify);
         console.log("fundingFee: ", _fees.fundingFee);
         console.log("borrowFee: ", _fees.borrowFee);
         console.log("priceImpact: ", uint256(_fees.priceImpact));

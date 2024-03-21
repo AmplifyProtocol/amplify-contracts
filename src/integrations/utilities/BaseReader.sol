@@ -11,7 +11,8 @@ abstract contract BaseReader {
     IDataStore constant amplifyDataStore = IDataStore(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
 
     struct FeesAccrued {
-        uint256 executionFee;
+        uint256 executionFeeDex;
+        uint256 executionFeeAmplify;
         uint256 fundingFee;
         uint256 borrowFee;
         int256 priceImpact;

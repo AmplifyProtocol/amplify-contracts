@@ -94,7 +94,8 @@ contract GMXV2Reader is BaseReader {
 
     function getAccruedFees(bytes32 _routeTypeKey, address _trader) override public view returns (FeesAccrued memory _fees) {
         _fees = FeesAccrued({
-            executionFee: 0, // To be added
+            executionFeeDex: CommonHelper.minExecutionFee(amplifyDataStore),
+            executionFeeAmplify: CommonHelper.minPuppetExecutionFee(amplifyDataStore),
             fundingFee: _getFundingFee(_routeTypeKey, _trader),
             borrowFee: _getAccruedBorrowingFee(_routeTypeKey, _trader),
             priceImpact: _getPriceImpact(_routeTypeKey, _trader),
@@ -170,11 +171,11 @@ contract GMXV2Reader is BaseReader {
         uint256 ratio = shortInterestUsd < longInterestUsd ? (shortInterestUsd * 1e30 / longInterestUsd) : (longInterestUsd * 1e30 / shortInterestUsd);
         int256 factorPerSecondB = (int256(ratio) * fundingFactor / int256(1e30));
         if (longsPayShorts) {
-            longFunding = factorPerSecondA / 1e30;
-            shortFunding = factorPerSecondB / 1e30;
+            longFunding = factorPerSecondA;
+            shortFunding = factorPerSecondB;
         } else {
-            longFunding = factorPerSecondB / 1e30;
-            shortFunding = factorPerSecondA / 1e30;
+            longFunding = factorPerSecondB;
+            shortFunding = factorPerSecondA;
         }
     }
     
@@ -277,24 +278,6 @@ contract GMXV2Reader is BaseReader {
         
         return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference) / 1e30 /100 ; //100 - fraction to % coeficient convertion
     }
-
-    // function _getOpenInterestMarket(address market) internal view returns (OpenInterest memory _interest) {
-    //     Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
-        
-    //     uint256 longInterestUsingLongToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, true));
-    //     uint256 longInterestUsingShortToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, true));
-    //     uint256 shortInterestUsingLongToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.longToken, false));
-    //     uint256 shortInterestUsingShortToken = _gmxDataStore.getUint(GmxKeys.openInterestKey(market, marketProps.shortToken, false));
-        
-    //     _interest = OpenInterest({
-    //         openInterestLong:longInterestUsingLongToken + longInterestUsingShortToken,
-    //         openInterestShort: shortInterestUsingLongToken + shortInterestUsingShortToken,
-    //         maxOpenInterestLong: _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, true)),
-    //         maxOpenInterestShort: _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(market, false)),
-    //         openInterestReserveLong: _gmxDataStore.getUint(GmxKeys.openInterestReserveFactorKey(market, true)),
-    //         openInterestReserveShort: _gmxDataStore.getUint(GmxKeys.openInterestReserveFactorKey(market, false))
-    //     });
-    // }
 
     function _getPriceImpact(bytes32 _routeTypeKey, address _trader) internal view returns (int256) { 
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
