@@ -77,7 +77,19 @@ contract GMXV2ReaderTest is BaseGMXV2 {
         
         console.log("borrowingForLongs: ", _fees.borrowingForLongs);
         console.log("borrowingForShorts: ", _fees.borrowingForShorts);
-        console.log("fundingForLongs: ", uint256(_fees.fundingForLongs));
-        console.log("fundingForShorts: ", uint256(_fees.fundingForShorts));
+        if (_fees.fundingForLongs > 0) {
+        console.log("fundingForLongs (+): ", uint256(_fees.fundingForLongs));
+        console.log("fundingForShorts (-): ", uint256(_fees.fundingForShorts));
+        } else {
+        console.log("fundingForLongs (-): ", uint256(_fees.fundingForLongs));
+        console.log("fundingForShorts (+): ", uint256(_fees.fundingForShorts));
+        }
+    }
+
+    function testGetLiquidationPrice() view external {
+        
+        int256 _liquidationPrice = _reader.getLiquidationPrice(_routeTypeKey, _trader); 
+        
+        console.log("liquidationPrice: ", uint256(_liquidationPrice));
     }
 }       

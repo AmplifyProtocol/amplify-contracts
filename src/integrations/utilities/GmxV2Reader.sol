@@ -18,6 +18,7 @@ pragma solidity 0.8.23;
 import {GMXV2Keys} from "src/integrations/GMXV2/libraries/GMXV2Keys.sol";
 import {GMXV2OrchestratorHelper} from "src/integrations/GMXV2/libraries/GMXV2OrchestratorHelper.sol";
 import {IGMXV2Reader, Market, Price, MarketPoolValueInfo, Position, MarketUtils, ReaderUtils, GmxKeys, ReaderPricingUtils} from "src/integrations/utilities/interfaces/IGmxV2Reader.sol";
+
 import {DataStore} from "src/integrations/utilities/DataStore.sol";
 import "./BaseReader.sol";
 
@@ -108,10 +109,10 @@ contract GMXV2Reader is BaseReader {
         (, int256 _fundingForLongs, int256 _fundingForShorts) = this.getFundingFeesPerSecond(market);
 
         _fees = FeesRates({
-            borrowingForLongs: _borrowingForLongs,  // Factor Per Second
+            borrowingForLongs: _borrowingForLongs,  // Factor Per Second //%-> /1e24 *100 
             borrowingForShorts: _borrowingForShorts, // Factor Per Second
             fundingForLongs: _fundingForLongs,
-            fundingForShorts: _fundingForShorts
+            fundingForShorts: _fundingForShorts // %-> /1e30 *100
          });
     }
 
@@ -158,6 +159,27 @@ contract GMXV2Reader is BaseReader {
         return (marketInfo.borrowingFactorPerSecondForLongs, marketInfo.borrowingFactorPerSecondForShorts);
     }
 
+    // function getFundingFeesPerSecond(address market) external view returns (bool longsPayShorts, int256 longFunding, int256 shortFunding ,uint256 ratio) {
+
+    //     OpenInterest memory _interest = getOpenInterest(market);
+    //     uint256 longInterestUsd = _interest.longOI;
+    //     uint256 shortInterestUsd = _interest.shortOI;
+
+    //     int256 fundingFactor = _gmxDataStore.getInt(GmxKeys.savedFundingFactorPerSecondKey(market));
+        
+    //     longsPayShorts = fundingFactor > 0;
+    //     int256 factorPerSecondA = -(fundingFactor);
+    //     ratio = shortInterestUsd < longInterestUsd ? ((shortInterestUsd * 1e30 / longInterestUsd)) : ((longInterestUsd * 1e30 / shortInterestUsd));
+    //     int256 factorPerSecondB = (int256(ratio) * fundingFactor / 1e30);
+    //     if (longsPayShorts) {
+    //         longFunding = factorPerSecondA;
+    //         shortFunding = factorPerSecondB;
+    //     } else {
+    //         longFunding = factorPerSecondB;
+    //         shortFunding = factorPerSecondA;
+    //     }
+    // }
+
     function getFundingFeesPerSecond(address market) external view returns (bool longsPayShorts, int256 longFunding, int256 shortFunding) {
 
         OpenInterest memory _interest = getOpenInterest(market);
@@ -167,62 +189,58 @@ contract GMXV2Reader is BaseReader {
         int256 fundingFactor = _gmxDataStore.getInt(GmxKeys.savedFundingFactorPerSecondKey(market));
         
         longsPayShorts = fundingFactor > 0;
-        int256 factorPerSecondA = -fundingFactor;
-        uint256 ratio = shortInterestUsd < longInterestUsd ? (shortInterestUsd * 1e30 / longInterestUsd) : (longInterestUsd * 1e30 / shortInterestUsd);
-        int256 factorPerSecondB = (int256(ratio) * fundingFactor / int256(1e30));
-        if (longsPayShorts) {
-            longFunding = factorPerSecondA;
-            shortFunding = factorPerSecondB;
-        } else {
-            longFunding = factorPerSecondB;
-            shortFunding = factorPerSecondA;
-        }
+        // (uint256 ratio0, uint256 ratio1) = shortInterestUsd < longInterestUsd ? ((shortInterestUsd * 1e30 / longInterestUsd), (longInterestUsd * 1e30 / shortInterestUsd)) : ((longInterestUsd * 1e30 / shortInterestUsd), (shortInterestUsd * 1e30 / longInterestUsd));
+        uint256 ratio = shortInterestUsd < longInterestUsd ? ((shortInterestUsd * 1e30 / longInterestUsd)) : ((longInterestUsd * 1e30 / shortInterestUsd));
+        int256 factorPerSecondB = (int256(ratio) * fundingFactor / 1e30);
+        int256 factorPerSecondA = (int256(1e60 / ratio) * fundingFactor / 1e30);
+        longFunding = longsPayShorts ? (-1) * factorPerSecondA : factorPerSecondB;
+        shortFunding = longsPayShorts ? factorPerSecondB : (-1) * factorPerSecondA;
     }
     
-    // function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) override public view returns (int256 _liquidationPrice) {
+    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public view returns (int256 _liquidationPrice) {
 
-    //     PositionData memory _position = getPosition(_routeTypeKey, _trader);
-    //     FeesAccrued memory _fees = getAccruedFees(_routeTypeKey, _trader);
-    //     Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _position.market);
+        PositionData memory _position = getPosition(_routeTypeKey, _trader);
+        FeesAccrued memory _fees = getAccruedFees(_routeTypeKey, _trader);
+        Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _position.market);
 
-    //     int256 totalPendingFeesUsd = _fees.fundingFee + _fees.borrowFee + _fees.closeFee;
+        uint256 totalPendingFeesUsd = _fees.fundingFee + _fees.borrowFee + _fees.closeFee;
 
-    //     int256 maxNegativePriceImpactUsd = (-1) * int256(_position.sizeInUsd * _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
+        int256 maxNegativePriceImpactUsd = (-1) * int256(_position.sizeInUsd * _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
 
-    //     int256 priceImpactDeltaUsd = _getPriceImpactDeltaUsd(_fees.priceImpact, maxNegativePriceImpactUsd, true);
+        int256 priceImpactDeltaUsd = _getPriceImpactDeltaUsd(_fees.priceImpact, maxNegativePriceImpactUsd, true);
 
-    //     uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market)); // This determines the minimum allowed ratio of (position collateral) / (position size)
-    //     int256 liquidationCollateralUsd = int256(_position.sizeInUsd * minCollateralFactor);
+        uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market)); // This determines the minimum allowed ratio of (position collateral) / (position size)
+        int256 liquidationCollateralUsd = int256(_position.sizeInUsd * minCollateralFactor);
 
-    //     int256 indexTokenDenominator ; //TODO: retrieve index token denominator
+        int256 indexTokenDenominator = 1e18 ; //TODO: retrieve index token denominator
 
-    //     if (_position.collateralToken == _marketProps.indexToken) {
-    //         if (_position.isLong) {
-    //             uint256 denominator = _position.sizeInTokens + _position.collateralAmount;
-    //             if (denominator == 0) return 0;
+        if (_position.collateralToken == _marketProps.indexToken) {
+            if (_position.isLong) {
+                uint256 denominator = _position.sizeInTokens + _position.collateralAmount;
+                if (denominator == 0) return 0;
 
-    //             _liquidationPrice = (int256(_position.sizeInUsd) + liquidationCollateralUsd - priceImpactDeltaUsd + totalPendingFeesUsd) / int256(denominator) * indexTokenDenominator;
-    //         } else {
-    //             uint256 denominator = _position.sizeInTokens - _position.collateralAmount;
-    //             if (denominator == 0) return 0;
+                _liquidationPrice = (int256(_position.sizeInUsd) + liquidationCollateralUsd - priceImpactDeltaUsd + int256(totalPendingFeesUsd)) / int256(denominator) * indexTokenDenominator;
+            } else {
+                uint256 denominator = _position.sizeInTokens - _position.collateralAmount;
+                if (denominator == 0) return 0;
 
-    //             _liquidationPrice = (int256(_position.sizeInUsd) - liquidationCollateralUsd + priceImpactDeltaUsd - totalPendingFeesUsd) / int256(denominator) * indexTokenDenominator;
-    //         }
-    //     } else {
-    //         if (_position.sizeInTokens == 0) return 0;
-    //         int256 remainingCollateralUsd = int256(_position.collateralAmount) + priceImpactDeltaUsd - totalPendingFeesUsd - _fees.closeFee;
+                _liquidationPrice = (int256(_position.sizeInUsd) - liquidationCollateralUsd + priceImpactDeltaUsd - int256(totalPendingFeesUsd)) / int256(denominator) * indexTokenDenominator;
+            }
+        } else {
+            if (_position.sizeInTokens == 0) return 0;
+            int256 remainingCollateralUsd = int256(_position.collateralAmount) + priceImpactDeltaUsd - int256(totalPendingFeesUsd) - int256(_fees.closeFee);
 
-    //         if (_position.isLong) {
-    //             _liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd + int256(_position.sizeInUsd)) * indexTokenDenominator) / int256(_position.sizeInTokens);
-    //         } else {
-    //             _liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd - int256(_position.sizeInUsd)) * indexTokenDenominator) / (-1 * int256(_position.sizeInTokens));
-    //         }
-    //     }
+            if (_position.isLong) {
+                _liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd + int256(_position.sizeInUsd)) * indexTokenDenominator) / int256(_position.sizeInTokens);
+            } else {
+                _liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd - int256(_position.sizeInUsd)) * indexTokenDenominator) / (-1 * int256(_position.sizeInTokens));
+            }
+        }
 
-    //     if (_liquidationPrice <= 0) return 0;
+        if (_liquidationPrice <= 0) return 0;
 
-    //     return _liquidationPrice;
-    // }
+        return _liquidationPrice;
+    }
 
     // ============================================================================================
     // Internal View Functions
