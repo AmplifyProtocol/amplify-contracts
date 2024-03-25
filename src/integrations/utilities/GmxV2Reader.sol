@@ -27,29 +27,17 @@ contract GMXV2Reader is BaseReader {
 
     struct PositionInfo {
         uint256 executionPrice;
-        // int256 priceImpactUsd;
         uint256 fundingFeeAmount;
-        // uint256 claimableLongTokenAmount;
-        // uint256 claimableShortTokenAmount;
         uint256 latestFundingFeeAmountPerSize;
         uint256 latestLongTokenClaimableFundingAmountPerSize;
         uint256 latestShortTokenClaimableFundingAmountPerSize;
         uint256 borrowingFeeUsd;
-        // uint256 borrowingFeeReceiverFactor;
-        // uint256 borrowingFeeAmountForFeeReceiver;
-        // uint256 protocolFeeAmount;
-        // uint256 positionFeeFactor;
-        // uint256 positionFeeReceiverFactor;
-        // uint256 feeAmountForPool;
-        // uint256 positionFeeAmountForPool;
-        // uint256 positionFeeAmount;
-        // uint256 totalCostAmountExcludingFunding;
-        // uint256 totalCostAmount;
     }
 
     IGMXV2Reader constant reader = IGMXV2Reader(0xf60becbba223EEA9495Da3f606753867eC10d139);
     IDataStore constant _gmxDataStore = IDataStore(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8);
     DataStore gmxDataStore = DataStore(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8);
+
 
     // ============================================================================================
     // View Functions
@@ -116,11 +104,13 @@ contract GMXV2Reader is BaseReader {
     }
 
     function getAccruedFees(bytes32 _routeTypeKey, address _trader) override public view returns (FeesAccrued memory _fees) {
+        PositionInfo memory _position = _getPositionFeesInfo(_routeTypeKey, _trader);
+        
         _fees = FeesAccrued({
             executionFeeDex: CommonHelper.minExecutionFee(amplifyDataStore),
             executionFeeAmplify: CommonHelper.minPuppetExecutionFee(amplifyDataStore),
-            fundingFee: _getFundingFee(_routeTypeKey, _trader),
-            borrowFee: _getAccruedBorrowingFee(_routeTypeKey, _trader),
+            fundingFee: _position.fundingFeeAmount,
+            borrowFee: _position.borrowingFeeUsd,
             priceImpact: _getPriceImpact(_routeTypeKey, _trader),
             closeFee: 0 // To be added
          });
@@ -141,6 +131,7 @@ contract GMXV2Reader is BaseReader {
     function getPosition(bytes32 _routeTypeKey, address _trader) override public view returns (PositionData memory _position){
         (address _route,) =  _getMarket(_routeTypeKey, _trader);
         bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
+        
         Position.Props memory positionProps = reader.getPosition(
             gmxDataStore,
             _key
@@ -198,51 +189,65 @@ contract GMXV2Reader is BaseReader {
         shortFunding = longsPayShorts ? factorPerSecondB : (-1) * factorPerSecondA;
     }
     
-    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public view returns (int256 _liquidationPrice) {
+    // function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public view returns (int256 _liquidationPrice) {
+
+    //     PositionData memory _position = getPosition(_routeTypeKey, _trader);
+    //     FeesAccrued memory _fees = getAccruedFees(_routeTypeKey, _trader);
+    //     Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _position.market);
+
+    //     uint256 totalPendingFeesUsd = _fees.fundingFee * 1e15 + _fees.borrowFee /1e3 + _fees.closeFee;
+
+    //     int256 maxNegativePriceImpactUsd = (-1) * int256(_position.sizeInUsd * _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
+
+    //     int256 priceImpactDeltaUsd = _getPriceImpactDeltaUsd(_fees.priceImpact, maxNegativePriceImpactUsd, true);
+
+    //     uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market)); // This determines the minimum allowed ratio of (position collateral) / (position size)
+    //     int256 liquidationCollateralUsd = int256(_position.sizeInUsd * minCollateralFactor);
+
+    //     int256 indexTokenDenominator = 1e18 ; //TODO: retrieve index token denominator
+
+    //     if (_position.collateralToken == _marketProps.indexToken) {
+    //         if (_position.isLong) {
+    //             uint256 denominator = _position.sizeInTokens + _position.collateralAmount;
+    //             if (denominator == 0) return 0;
+
+    //             _liquidationPrice = (int256(_position.sizeInUsd) + liquidationCollateralUsd - priceImpactDeltaUsd + int256(totalPendingFeesUsd)) / int256(denominator) * indexTokenDenominator;
+    //         } else {
+    //             uint256 denominator = _position.sizeInTokens - _position.collateralAmount;
+    //             if (denominator == 0) return 0;
+
+    //             _liquidationPrice = (int256(_position.sizeInUsd) - liquidationCollateralUsd + priceImpactDeltaUsd - int256(totalPendingFeesUsd)) / int256(denominator) * indexTokenDenominator;
+    //         }
+    //     } else {
+    //         if (_position.sizeInTokens == 0) return 0;
+    //         int256 remainingCollateralUsd = int256(_position.collateralAmount) + priceImpactDeltaUsd - int256(totalPendingFeesUsd) - int256(_fees.closeFee);
+
+    //         if (_position.isLong) {
+    //             _liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd + int256(_position.sizeInUsd)) * indexTokenDenominator) / int256(_position.sizeInTokens);
+    //         } else {
+    //             _liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd - int256(_position.sizeInUsd)) * indexTokenDenominator) / (-1 * int256(_position.sizeInTokens));
+    //         }
+    //     }
+
+    //     if (_liquidationPrice <= 0) return 0;
+
+    //     return _liquidationPrice;
+    // }
+
+    function getMinCollateralFactor(bytes32 _routeTypeKey, address _trader) public view returns (int256 maxNegativePriceImpactUsd, int256 priceImpactDeltaUsd, uint256 minCollateralFactor) {
 
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
         FeesAccrued memory _fees = getAccruedFees(_routeTypeKey, _trader);
         Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _position.market);
 
-        uint256 totalPendingFeesUsd = _fees.fundingFee + _fees.borrowFee + _fees.closeFee;
+        uint256 totalPendingFeesUsd = _fees.fundingFee * 1e15 + _fees.borrowFee /1e3 + _fees.closeFee;
 
-        int256 maxNegativePriceImpactUsd = (-1) * int256(_position.sizeInUsd * _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
+        maxNegativePriceImpactUsd = (-1) * int256(_position.sizeInUsd * _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
 
-        int256 priceImpactDeltaUsd = _getPriceImpactDeltaUsd(_fees.priceImpact, maxNegativePriceImpactUsd, true);
+        priceImpactDeltaUsd = _getPriceImpactDeltaUsd(_fees.priceImpact, maxNegativePriceImpactUsd, true);
 
-        uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market)); // This determines the minimum allowed ratio of (position collateral) / (position size)
-        int256 liquidationCollateralUsd = int256(_position.sizeInUsd * minCollateralFactor);
-
-        int256 indexTokenDenominator = 1e18 ; //TODO: retrieve index token denominator
-
-        if (_position.collateralToken == _marketProps.indexToken) {
-            if (_position.isLong) {
-                uint256 denominator = _position.sizeInTokens + _position.collateralAmount;
-                if (denominator == 0) return 0;
-
-                _liquidationPrice = (int256(_position.sizeInUsd) + liquidationCollateralUsd - priceImpactDeltaUsd + int256(totalPendingFeesUsd)) / int256(denominator) * indexTokenDenominator;
-            } else {
-                uint256 denominator = _position.sizeInTokens - _position.collateralAmount;
-                if (denominator == 0) return 0;
-
-                _liquidationPrice = (int256(_position.sizeInUsd) - liquidationCollateralUsd + priceImpactDeltaUsd - int256(totalPendingFeesUsd)) / int256(denominator) * indexTokenDenominator;
-            }
-        } else {
-            if (_position.sizeInTokens == 0) return 0;
-            int256 remainingCollateralUsd = int256(_position.collateralAmount) + priceImpactDeltaUsd - int256(totalPendingFeesUsd) - int256(_fees.closeFee);
-
-            if (_position.isLong) {
-                _liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd + int256(_position.sizeInUsd)) * indexTokenDenominator) / int256(_position.sizeInTokens);
-            } else {
-                _liquidationPrice = ((liquidationCollateralUsd - remainingCollateralUsd - int256(_position.sizeInUsd)) * indexTokenDenominator) / (-1 * int256(_position.sizeInTokens));
-            }
-        }
-
-        if (_liquidationPrice <= 0) return 0;
-
-        return _liquidationPrice;
+        minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market));
     }
-
     // ============================================================================================
     // Internal View Functions
     // ============================================================================================
@@ -253,12 +258,6 @@ contract GMXV2Reader is BaseReader {
         return (_route, GMXV2OrchestratorHelper.gmxMarketToken(amplifyDataStore, _route));
     }
 
-    function _getFundingFee(bytes32 _routeTypeKey, address _trader) internal view returns (uint256) {
-        (address _route,) =  _getMarket(_routeTypeKey, _trader);
-        bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
-        Position.Props memory positionProps = reader.getPosition(gmxDataStore,_key);
-        return positionProps.numbers.fundingFeeAmountPerSize;
-    }
 
     function _getBorrowingFeePoolFactor(bytes32 _routeTypeKey, address _trader) internal view returns (uint256 _borrowingFeePoolFactor) {
         (,address market) =  _getMarket(_routeTypeKey, _trader);
@@ -285,18 +284,25 @@ contract GMXV2Reader is BaseReader {
         return marketValueProp.borrowingFeePoolFactor;
     }
 
-    function _getAccruedBorrowingFee(bytes32 _routeTypeKey, address _trader) internal view returns (uint256 _borrowingFees) {
+    function _getFundingFeePerSize(bytes32 _routeTypeKey, address _trader) external view returns (uint256) {
         (address _route,) =  _getMarket(_routeTypeKey, _trader);
         bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
-        Position.Props memory positionProps = reader.getPosition(
-            gmxDataStore,
-            _key
-        );
-        // Calculate the difference between the pool borrowing factor and the position borrowing factor
-        uint256 _borrowingFactorDifference = _getBorrowingFeePoolFactor(_routeTypeKey,_trader) - positionProps.numbers.borrowingFactor;
-        
-        return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference) / 1e30 /100 ; //100 - fraction to % coeficient convertion
+        Position.Props memory positionProps = reader.getPosition(gmxDataStore,_key);
+        return positionProps.numbers.fundingFeeAmountPerSize;
     }
+
+    // function _getAccruedBorrowingFee(bytes32 _routeTypeKey, address _trader) internal view returns (uint256 _borrowingFees) {
+    //     (address _route,) =  _getMarket(_routeTypeKey, _trader);
+    //     bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
+    //     Position.Props memory positionProps = reader.getPosition(
+    //         gmxDataStore,
+    //         _key
+    //     );
+    //     // Calculate the difference between the pool borrowing factor and the position borrowing factor
+    //     uint256 _borrowingFactorDifference = _getBorrowingFeePoolFactor(_routeTypeKey,_trader) - positionProps.numbers.borrowingFactor;
+        
+    //     return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference) / 1e30;
+    // }
 
     function _getPriceImpact(bytes32 _routeTypeKey, address _trader) internal view returns (int256) { 
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
@@ -332,7 +338,7 @@ contract GMXV2Reader is BaseReader {
         return priceImpactDeltaUsd;
     }
 
-    function getPositionFeesInfo(bytes32 _routeTypeKey, address _trader) external view returns (PositionInfo memory _info) {
+    function _getPositionFeesInfo(bytes32 _routeTypeKey, address _trader) public view returns (PositionInfo memory _info) {
         (address _route,) =  _getMarket(_routeTypeKey, _trader);
         bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
         (,address market) =  _getMarket(_routeTypeKey, _trader);
@@ -353,41 +359,25 @@ contract GMXV2Reader is BaseReader {
             shortTokenPrice: shortTokenPriceProps
             });
 
-        // PositionData memory _position = getPosition(_routeTypeKey, _trader);
+        PositionData memory _position = getPosition(_routeTypeKey, _trader);
 
         ReaderUtils.PositionInfo memory positonInfo = reader.getPositionInfo(
             gmxDataStore,
             IReferralStorage(0xe6fab3F0c7199b0d34d7FbE83394fc0e0D06e99d),
             _key,
             prices,
-            0, //_position.sizeInUsd, 
+            _position.sizeInUsd,  //0
             address(0),
-            false            
+            true            
         );
 
         return PositionInfo({
             executionPrice: positonInfo.executionPriceResult.executionPrice,
-            // priceImpactUsd: positonInfo.executionPriceResult.priceImpactUsd,
             fundingFeeAmount: positonInfo.fees.funding.fundingFeeAmount,
-            // claimableLongTokenAmount: positonInfo.fees.funding.claimableLongTokenAmount,
-            // claimableShortTokenAmount: positonInfo.fees.funding.claimableShortTokenAmount,
             latestFundingFeeAmountPerSize: positonInfo.fees.funding.latestFundingFeeAmountPerSize,
             latestLongTokenClaimableFundingAmountPerSize: positonInfo.fees.funding.latestLongTokenClaimableFundingAmountPerSize,
             latestShortTokenClaimableFundingAmountPerSize: positonInfo.fees.funding.latestShortTokenClaimableFundingAmountPerSize,
             borrowingFeeUsd: positonInfo.fees.borrowing.borrowingFeeUsd
-            // borrowingFeeReceiverFactor: positonInfo.fees.borrowing.borrowingFeeReceiverFactor,
-            // borrowingFeeAmountForFeeReceiver: positonInfo.fees.borrowing.borrowingFeeAmountForFeeReceiver,
-            // protocolFeeAmount: positonInfo.fees.protocolFeeAmount,
-            // positionFeeFactor: positonInfo.fees.positionFeeFactor,
-            // positionFeeReceiverFactor: positonInfo.fees.positionFeeReceiverFactor,
-            // feeAmountForPool: positonInfo.fees.feeAmountForPool,
-            // positionFeeAmountForPool: positonInfo.fees.positionFeeAmountForPool,
-            // positionFeeAmount: positonInfo.fees.positionFeeAmount,
-            // totalCostAmountExcludingFunding: positonInfo.fees.totalCostAmountExcludingFunding,
-            // totalCostAmount: positonInfo.fees.totalCostAmount
         });
     }
-
-
-
 }
