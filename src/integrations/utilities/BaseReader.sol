@@ -106,5 +106,37 @@ abstract contract BaseReader {
 
     // * regarding getDecreaseSizeDelta/getDecreaseCollateralDelta -- need to think more about it, so feel free to shot me a dm if your not sure
 
-    
+        
+    function getBestPuppets(address[] memory puppets, address _route, IDataStore _dataStore) public view returns (address[] memory bestPuppets) {
+        uint256 maxPuppets = CommonHelper.maxPuppets(_dataStore);
+        
+        uint256[] memory _allocations = new uint256[](puppets.length);
+        address[] memory _validPuppets = new address[](puppets.length);
+        uint256 _validPuppetsCount;
+
+        for (uint256 i = 0; i < puppets.length; i++) {
+            uint256 allowance = CommonHelper.puppetAllowancePercentage(_dataStore, puppets[i], _route);
+            uint256 deposit = CommonHelper.puppetAccountBalance(_dataStore, puppets[i], _route);
+            uint256 allocation = deposit * allowance / 10_000;
+            uint256 expiry = CommonHelper.puppetSubscriptionExpiry(_dataStore, puppets[i], _route);
+            if (allocation > 0 && expiry > 0) {
+                _allocations[_validPuppetsCount] = allocation;
+                _validPuppets[_validPuppetsCount] = puppets[i];
+                _validPuppetsCount++;
+            }
+        }
+        for (uint256 i = 0; i < _validPuppetsCount-1; i++) {
+            for (uint256 j = 0; j < _validPuppetsCount-i-1; j++) {
+                if (_allocations[j] < _allocations[j+1]) {
+                    (_allocations[j], _allocations[j+1]) = (_allocations[j+1], _allocations[j]);
+                    (_validPuppets[j], _validPuppets[j+1]) = (_validPuppets[j+1], _validPuppets[j]);
+                }
+            }
+        }
+        uint256 count = maxPuppets < _validPuppetsCount ? maxPuppets : _validPuppetsCount;
+        bestPuppets = new address[](count);
+        for (uint256 i = 0; i < count; i++) {
+            bestPuppets[i] = _validPuppets[i];
+        }
+    }
 }
