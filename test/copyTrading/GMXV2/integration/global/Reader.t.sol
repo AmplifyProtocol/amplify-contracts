@@ -145,22 +145,24 @@ contract GMXV2ReaderTest is BaseGMXV2 {
 
         _subscribePuppets();
         
-        address[] memory _puppets = new address[](4);
+        address[] memory _puppets = new address[](5);
         _puppets[0] = puppetA;
         _puppets[1] = puppetB;
         _puppets[2] = puppetC;
         _puppets[3] = puppetD;
-        // _puppets[4] = unsubscribedPuppet;
+        _puppets[4] = unsubscribedPuppet;
 
         address[] memory _bestPuppets = _reader.getBestPuppets(_puppets, routeMock, context.dataStore); 
         
-        assertEq(_bestPuppets.length, 0, "testGetBestPuppets: E1");
-        // assertEq(_bestPuppets[0], puppetD, "testGetBestPuppets: E2");
-        // assertEq(_bestPuppets[1], puppetA, "testGetBestPuppets: E3");
+        assertEq(_bestPuppets.length, 4, "testGetBestPuppets: E1");
+        assertEq(_bestPuppets[0], puppetD, "testGetBestPuppets: E2");
+        assertEq(_bestPuppets[1], puppetA, "testGetBestPuppets: E3");
 
-        // console.log("_bestPuppets[0]: ", _bestPuppets[0]);
-        // console.log("_bestPuppets[1]: ", _bestPuppets[1]);
-        // console.log("_bestPuppets[2]: ", _bestPuppets[2]);
+        console.log("_bestPuppets[0]: ", _bestPuppets[0]);
+        console.log("_bestPuppets[1]: ", _bestPuppets[1]);
+        console.log("_bestPuppets[2]: ", _bestPuppets[2]);
+        console.log("_bestPuppets[3]: ", _bestPuppets[3]);
+        
     }
 
     function _subscribePuppets() internal {
@@ -188,6 +190,11 @@ contract GMXV2ReaderTest is BaseGMXV2 {
         assertEq(CommonHelper.puppetAllowancePercentage(context.dataStore, puppetB, routeMock),  allowancePuppetB, "_subscribePuppets: E1");
         assertEq(CommonHelper.puppetAllowancePercentage(context.dataStore, puppetC, routeMock),  allowancePuppetC, "_subscribePuppets: E2");
         assertEq(CommonHelper.puppetAllowancePercentage(context.dataStore, puppetD, routeMock),  allowancePuppetD, "_subscribePuppets: E3");
+
+        assertTrue(CommonHelper.puppetAccountBalance(context.dataStore, puppetA, _weth) > 0, "_subscribePuppets: E4");
+        assertTrue(CommonHelper.puppetAccountBalance(context.dataStore, puppetB, _weth) > 0, "_subscribePuppets: E5");
+        assertTrue(CommonHelper.puppetAccountBalance(context.dataStore, puppetC, _weth) > 0, "_subscribePuppets: E6");
+        assertTrue(CommonHelper.puppetAccountBalance(context.dataStore, puppetD, _weth) > 0, "_subscribePuppets: E7");
     }
 
     function _createPuppets() internal {

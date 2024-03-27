@@ -9,6 +9,7 @@ import {CommonHelper} from "src/integrations/libraries/RouteSetter.sol";
 abstract contract BaseReader {
     
     IDataStore constant amplifyDataStore = IDataStore(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
+    address _weth = address(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
 
     struct FeesAccrued {
         uint256 executionFeeDex;
@@ -116,7 +117,7 @@ abstract contract BaseReader {
 
         for (uint256 i = 0; i < puppets.length; i++) {
             uint256 allowance = CommonHelper.puppetAllowancePercentage(_dataStore, puppets[i], _route);
-            uint256 deposit = CommonHelper.puppetAccountBalance(_dataStore, puppets[i], _route);
+            uint256 deposit = CommonHelper.puppetAccountBalance(_dataStore, puppets[i], _weth);
             uint256 allocation = deposit * allowance / 10_000;
             uint256 expiry = CommonHelper.puppetSubscriptionExpiry(_dataStore, puppets[i], _route);
             if (allocation > 0 && expiry > 0) {
