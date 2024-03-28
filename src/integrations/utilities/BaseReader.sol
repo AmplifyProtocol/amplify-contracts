@@ -125,6 +125,8 @@ abstract contract BaseReader {
                 _validPuppetsCount++;
             }
         }
+        if (_validPuppetsCount == 0) revert NoValidPuppets();
+
         for (uint256 i = 0; i < _validPuppetsCount-1; i++) {
             for (uint256 j = 0; j < _validPuppetsCount-i-1; j++) {
                 if (_allocations[j] < _allocations[j+1]) {
@@ -139,4 +141,10 @@ abstract contract BaseReader {
             bestPuppets[i] = _validPuppets[i];
         }
     }
+    
+    // ============================================================================================
+    // Errors
+    // ============================================================================================
+
+    error NoValidPuppets();
 }
