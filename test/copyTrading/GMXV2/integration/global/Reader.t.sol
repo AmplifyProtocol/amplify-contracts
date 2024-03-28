@@ -44,102 +44,102 @@ contract GMXV2ReaderTest is BaseGMXV2 {
     // Test Functions
     // ============================================================================================
 
-    // function testGetOpenInterest() view external {
+    function testGetOpenInterest() view external {
             
-    //     GMXV2Reader.OpenInterest memory _openInterest = _reader.getOpenInterest(_routeTypeKey, _trader);
+        GMXV2Reader.OpenInterest memory _openInterest = _reader.getOpenInterest(_routeTypeKey, _trader);
         
-    //     console.log("longOI, USD: ", _openInterest.longOI/1e30);
-    //     console.log("shortOI, USD: ", _openInterest.shortOI/1e30);
-    //     console.log("maxLongOI, USD: ", _openInterest.maxLongOI/1e30);
-    //     console.log("maxShortOI, USD: ", _openInterest.maxShortOI/1e30);
-    //     }
+        console.log("longOI, USD: ", _openInterest.longOI/1e30);
+        console.log("shortOI, USD: ", _openInterest.shortOI/1e30);
+        console.log("maxLongOI, USD: ", _openInterest.maxLongOI/1e30);
+        console.log("maxShortOI, USD: ", _openInterest.maxShortOI/1e30);
+        }
     
-    // function testGetPosition0() view external {
+    function testGetPosition0() view external {
 
-    //    GMXV2Reader.PositionData memory _position = _reader.getPosition(_routeTypeKey, _trader);
+       GMXV2Reader.PositionData memory _position = _reader.getPosition(_routeTypeKey, _trader);
        
-    //    console.log("_position.sizeInUsd: ",_position.sizeInUsd/1e30);
-    //    console.log("_position.sizeInTokens: ",_position.sizeInTokens);
-    //    console.log("_position.collateralAmount: ",_position.collateralAmount);
-    //    console.log("_position.market: ",_position.market);
-    //    console.log("_position.collateralToken: ",_position.collateralToken);
-    //    console.log("_position.isLong: ",_position.isLong);
-    // }
+       console.log("_position.sizeInUsd: ",_position.sizeInUsd/1e30);
+       console.log("_position.sizeInTokens: ",_position.sizeInTokens);
+       console.log("_position.collateralAmount: ",_position.collateralAmount);
+       console.log("_position.market: ",_position.market);
+       console.log("_position.collateralToken: ",_position.collateralToken);
+       console.log("_position.isLong: ",_position.isLong);
+    }
 
-    // function testGetMarketLiquidity() view external {
+    function testGetMarketLiquidity() view external {
             
-    //     (uint256 _longToken, uint256 _shortToken) = _reader.getAvailableLiquidity(_routeTypeKey, _trader);
+        (uint256 _longToken, uint256 _shortToken) = _reader.getAvailableLiquidity(_routeTypeKey, _trader);
         
-    //     console.log("long: ", _longToken/1e30);
-    //     console.log("short: ", _shortToken/1e30);
+        console.log("long: ", _longToken/1e30);
+        console.log("short: ", _shortToken/1e30);
+    }
+
+    function testGeAccruedFees() view external {
+        
+        GMXV2Reader.FeesAccrued memory _fees = _reader.getAccruedFees(_routeTypeKey, _trader); 
+        
+        console.log("executionFeeDex: ", _fees.executionFeeDex);
+        console.log("executionFeeAmplify: ", _fees.executionFeeAmplify);
+        console.log("fundingFee: ", _fees.fundingFee);
+        console.log("borrowFee: ", _fees.borrowFee);
+        console.log("priceImpact: ", uint256(_fees.priceImpact));
+        console.log("closeFee: ", _fees.closeFee);
+    }
+
+    function testGetFeesPerSecond() view external {
+        
+        GMXV2Reader.FeesRates memory _fees = _reader.getFeesPerSecond(market); 
+        
+        console.log("borrowingForLongs: ", _fees.borrowingForLongs);
+        console.log("borrowingForShorts: ", _fees.borrowingForShorts);
+        if (_fees.fundingForLongs > 0) {
+        console.log("fundingForLongs (+): ", uint256(_fees.fundingForLongs));
+        console.log("fundingForShorts (-): ", uint256(_fees.fundingForShorts));
+        } else {
+        console.log("fundingForLongs (-): ", uint256(_fees.fundingForLongs));
+        console.log("fundingForShorts (+): ", uint256(_fees.fundingForShorts));
+        }
+    }
+
+    // function testGetLiquidationPrice() view external {
+        
+    //     int256 _liquidationPrice = _reader.getLiquidationPrice(_routeTypeKey, _trader); 
+        
+    //     console.log("liquidationPrice: ", uint256(_liquidationPrice));
     // }
 
-    // function testGeAccruedFees() view external {
+    //  function testGetMock() view external {
         
-    //     GMXV2Reader.FeesAccrued memory _fees = _reader.getAccruedFees(_routeTypeKey, _trader); 
+    //     (int256 maxNegativePriceImpactUsd, int256 priceImpactDeltaUsd, uint256 minCollateralFactor) = _reader.getMinCollateralFactor(_routeTypeKey, _trader); 
         
-    //     console.log("executionFeeDex: ", _fees.executionFeeDex);
-    //     console.log("executionFeeAmplify: ", _fees.executionFeeAmplify);
-    //     console.log("fundingFee: ", _fees.fundingFee);
-    //     console.log("borrowFee: ", _fees.borrowFee);
-    //     console.log("priceImpact: ", uint256(_fees.priceImpact));
-    //     console.log("closeFee: ", _fees.closeFee);
+    //     console.log("maxNegativePriceImpactUsd: ", uint256(maxNegativePriceImpactUsd));
+    //     console.log("priceImpactDeltaUsd: ", uint256(priceImpactDeltaUsd));
+    //     console.log("minCollateralFactor: ", uint256(minCollateralFactor));
     // }
 
-    // function testGetFeesPerSecond() view external {
+    function testGetPositionInfoFees() view external {
         
-    //     GMXV2Reader.FeesRates memory _fees = _reader.getFeesPerSecond(market); 
+        GMXV2Reader.PositionInfo memory positonInfo = _reader._getPositionFeesInfo(_routeTypeKey, _trader); 
         
-    //     console.log("borrowingForLongs: ", _fees.borrowingForLongs);
-    //     console.log("borrowingForShorts: ", _fees.borrowingForShorts);
-    //     if (_fees.fundingForLongs > 0) {
-    //     console.log("fundingForLongs (+): ", uint256(_fees.fundingForLongs));
-    //     console.log("fundingForShorts (-): ", uint256(_fees.fundingForShorts));
-    //     } else {
-    //     console.log("fundingForLongs (-): ", uint256(_fees.fundingForLongs));
-    //     console.log("fundingForShorts (+): ", uint256(_fees.fundingForShorts));
-    //     }
-    // }
+        console.log("executionPrice: ", uint256(positonInfo.executionPrice));
+        console.log("fundingFeeAmount: ", uint256(positonInfo.fundingFeeAmount)); // correct amount: div 1e15 -> USD
+        console.log("latestFundingFeeAmountPerSize: ", uint256(positonInfo.latestFundingFeeAmountPerSize));
+        console.log("latestLongTokenClaimableFundingAmountPerSize: ", uint256(positonInfo.latestLongTokenClaimableFundingAmountPerSize));
+        console.log("latestShortTokenClaimableFundingAmountPerSize: ", uint256(positonInfo.latestShortTokenClaimableFundingAmountPerSize));
+        console.log("borrowingFeeUsd: ", uint256(positonInfo.borrowingFeeUsd)); // correct amount: div 1e34 -> USD
 
-    // // function testGetLiquidationPrice() view external {
-        
-    // //     int256 _liquidationPrice = _reader.getLiquidationPrice(_routeTypeKey, _trader); 
-        
-    // //     console.log("liquidationPrice: ", uint256(_liquidationPrice));
-    // // }
+        // === ALTERNATIVE WAY TO GET FUNDING FEE ACCRUED ===
 
-    // //  function testGetMock() view external {
+        uint256 fundingFeeAmountPerSize = _reader._getFundingFeePerSize(_routeTypeKey, _trader);
+        uint256 latestFundingFeeAmountPerSize = positonInfo.latestFundingFeeAmountPerSize;
         
-    // //     (int256 maxNegativePriceImpactUsd, int256 priceImpactDeltaUsd, uint256 minCollateralFactor) = _reader.getMinCollateralFactor(_routeTypeKey, _trader); 
-        
-    // //     console.log("maxNegativePriceImpactUsd: ", uint256(maxNegativePriceImpactUsd));
-    // //     console.log("priceImpactDeltaUsd: ", uint256(priceImpactDeltaUsd));
-    // //     console.log("minCollateralFactor: ", uint256(minCollateralFactor));
-    // // }
+        GMXV2Reader.PositionData memory _position = _reader.getPosition(_routeTypeKey, _trader);
+        uint256 size = _position.sizeInUsd;
 
-    // function testGetPositionInfoFees() view external {
-        
-    //     GMXV2Reader.PositionInfo memory positonInfo = _reader._getPositionFeesInfo(_routeTypeKey, _trader); 
-        
-    //     console.log("executionPrice: ", uint256(positonInfo.executionPrice));
-    //     console.log("fundingFeeAmount: ", uint256(positonInfo.fundingFeeAmount)); // correct amount: div 1e15 -> USD
-    //     console.log("latestFundingFeeAmountPerSize: ", uint256(positonInfo.latestFundingFeeAmountPerSize));
-    //     console.log("latestLongTokenClaimableFundingAmountPerSize: ", uint256(positonInfo.latestLongTokenClaimableFundingAmountPerSize));
-    //     console.log("latestShortTokenClaimableFundingAmountPerSize: ", uint256(positonInfo.latestShortTokenClaimableFundingAmountPerSize));
-    //     console.log("borrowingFeeUsd: ", uint256(positonInfo.borrowingFeeUsd)); // correct amount: div 1e34 -> USD
-
-    //     // === ALTERNATIVE WAY TO GET FUNDING FEE ACCRUED ===
-
-    //     uint256 fundingFeeAmountPerSize = _reader._getFundingFeePerSize(_routeTypeKey, _trader);
-    //     uint256 latestFundingFeeAmountPerSize = positonInfo.latestFundingFeeAmountPerSize;
-        
-    //     GMXV2Reader.PositionData memory _position = _reader.getPosition(_routeTypeKey, _trader);
-    //     uint256 size = _position.sizeInUsd;
-
-    //     uint256 fundingDiffFactor = latestFundingFeeAmountPerSize - fundingFeeAmountPerSize;
-    //     uint256 fundingFee = size * fundingDiffFactor / 1e30;
-    //     console.log("FUNDING_FEE_USD_1E30: ", fundingFee); // correct amount: div 1e30 -> USD
-    // }
+        uint256 fundingDiffFactor = latestFundingFeeAmountPerSize - fundingFeeAmountPerSize;
+        uint256 fundingFee = size * fundingDiffFactor / 1e30;
+        console.log("FUNDING_FEE_USD_1E30: ", fundingFee); // correct amount: div 1e30 -> USD
+    }
 
     function testGetBestPuppets()  external {
 
@@ -162,7 +162,6 @@ contract GMXV2ReaderTest is BaseGMXV2 {
         console.log("_bestPuppets[1]: ", _bestPuppets[1]);
         console.log("_bestPuppets[2]: ", _bestPuppets[2]);
         console.log("_bestPuppets[3]: ", _bestPuppets[3]);
-        
     }
 
     function _subscribePuppets() internal {
@@ -198,10 +197,10 @@ contract GMXV2ReaderTest is BaseGMXV2 {
     }
 
     function _createPuppets() internal {
-        puppetA = _createUser("Puppet A"); //makeAddr("puppetA");
-        puppetB = _createUser("Puppet B"); //makeAddr("puppetB");
-        puppetC = _createUser("Puppet C"); //makeAddr("puppetC");
-        puppetD = _createUser("Puppet D"); //makeAddr("puppetD");
-        unsubscribedPuppet = _createUser("Unsubscribed Puppet"); //makeAddr("unsubscribedPuppet");
+        puppetA = _createUser("Puppet A"); 
+        puppetB = _createUser("Puppet B"); 
+        puppetC = _createUser("Puppet C"); 
+        puppetD = _createUser("Puppet D"); 
+        unsubscribedPuppet = _createUser("Unsubscribed Puppet"); 
     }
 }

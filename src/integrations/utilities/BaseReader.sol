@@ -10,6 +10,8 @@ abstract contract BaseReader {
     
     IDataStore constant amplifyDataStore = IDataStore(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
     address _weth = address(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
+    uint256 internal constant _BASIS_POINTS_DIVISOR = 10000;
+
 
     struct FeesAccrued {
         uint256 executionFeeDex;
@@ -109,19 +111,16 @@ abstract contract BaseReader {
 
         
     function getBestPuppets(address[] memory puppets, address _route, IDataStore _dataStore) public view returns (address[] memory bestPuppets) {
-        uint256 maxPuppets = CommonHelper.maxPuppets(_dataStore);
-        
         uint256[] memory _allocations = new uint256[](puppets.length);
         address[] memory _validPuppets = new address[](puppets.length);
         uint256 _validPuppetsCount;
 
         for (uint256 i = 0; i < puppets.length; i++) {
             uint256 allowance = CommonHelper.puppetAllowancePercentage(_dataStore, puppets[i], _route);
-            uint256 deposit = CommonHelper.puppetAccountBalance(_dataStore, puppets[i], _weth);
-            uint256 allocation = deposit * allowance / 10_000;
+            uint256 deposit = CommonHelper.puppetAccountBalance(_dataStore, puppets[i], CommonHelper.wnt(_dataStore));
             uint256 expiry = CommonHelper.puppetSubscriptionExpiry(_dataStore, puppets[i], _route);
-            if (allocation > 0 && expiry > 0) {
-                _allocations[_validPuppetsCount] = allocation;
+            if (allowance > 0 && deposit > 0 && expiry > 0) {
+                _allocations[_validPuppetsCount] = deposit * allowance / _BASIS_POINTS_DIVISOR;
                 _validPuppets[_validPuppetsCount] = puppets[i];
                 _validPuppetsCount++;
             }
@@ -134,7 +133,7 @@ abstract contract BaseReader {
                 }
             }
         }
-        uint256 count = maxPuppets < _validPuppetsCount ? maxPuppets : _validPuppetsCount;
+        uint256 count = CommonHelper.maxPuppets(_dataStore) < _validPuppetsCount ? CommonHelper.maxPuppets(_dataStore) : _validPuppetsCount;
         bestPuppets = new address[](count);
         for (uint256 i = 0; i < count; i++) {
             bestPuppets[i] = _validPuppets[i];
