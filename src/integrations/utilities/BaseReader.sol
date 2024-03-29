@@ -110,7 +110,7 @@ abstract contract BaseReader {
     // * regarding getDecreaseSizeDelta/getDecreaseCollateralDelta -- need to think more about it, so feel free to shot me a dm if your not sure
 
         
-    function getBestPuppets(address[] memory _puppets, address _route, IDataStore _dataStore) public view returns (address[] memory _bestPuppets) {
+    function getBestPuppets(IDataStore _dataStore, address _route, address[] memory _puppets) public view returns (address[] memory _bestPuppets) {
         uint256[] memory _allocations = new uint256[](_puppets.length);
         address[] memory _validPuppets = new address[](_puppets.length);
         uint256 _validPuppetsCount;
@@ -119,7 +119,7 @@ abstract contract BaseReader {
             uint256 _allowance = CommonHelper.puppetAllowancePercentage(_dataStore, _puppets[i], _route);
             uint256 _deposit = CommonHelper.puppetAccountBalance(_dataStore, _puppets[i], CommonHelper.wnt(_dataStore));
             uint256 _expiry = CommonHelper.puppetSubscriptionExpiry(_dataStore, _puppets[i], _route);
-            if (_allowance > 0 && _deposit > 0 && _expiry > 0) {
+            if (_allowance > 0 && _deposit > 0 && _expiry > (block.timestamp + 24 hours)) {
                 _allocations[_validPuppetsCount] = _deposit * _allowance / _BASIS_POINTS_DIVISOR;
                 _validPuppets[_validPuppetsCount] = _puppets[i];
                 _validPuppetsCount++;
