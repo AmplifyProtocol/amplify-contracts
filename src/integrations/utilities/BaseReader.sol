@@ -111,7 +111,7 @@ abstract contract BaseReader {
 
         
     function getBestPuppets(IDataStore _dataStore, address _route, address[] memory _puppets) public view returns (address[] memory _bestPuppets) {
-        uint256[] memory _allocations = new uint256[](_puppets.length);
+        uint256[] memory _subscriptionAmount = new uint256[](_puppets.length);
         address[] memory _validPuppets = new address[](_puppets.length);
         uint256 _validPuppetsCount;
 
@@ -120,7 +120,7 @@ abstract contract BaseReader {
             uint256 _deposit = CommonHelper.puppetAccountBalance(_dataStore, _puppets[i], CommonHelper.wnt(_dataStore));
             uint256 _expiry = CommonHelper.puppetSubscriptionExpiry(_dataStore, _puppets[i], _route);
             if (_allowance > 0 && _deposit > 0 && _expiry > (block.timestamp + 24 hours)) {
-                _allocations[_validPuppetsCount] = _deposit * _allowance / _BASIS_POINTS_DIVISOR;
+                _subscriptionAmount[_validPuppetsCount] = _deposit * _allowance / _BASIS_POINTS_DIVISOR;
                 _validPuppets[_validPuppetsCount] = _puppets[i];
                 _validPuppetsCount++;
             }
@@ -129,8 +129,8 @@ abstract contract BaseReader {
 
         for (uint256 i = 0; i < _validPuppetsCount-1; i++) {
             for (uint256 j = 0; j < _validPuppetsCount-i-1; j++) {
-                if (_allocations[j] < _allocations[j+1]) {
-                    (_allocations[j], _allocations[j+1]) = (_allocations[j+1], _allocations[j]);
+                if (_subscriptionAmount[j] < _subscriptionAmount[j+1]) {
+                    (_subscriptionAmount[j], _subscriptionAmount[j+1]) = (_subscriptionAmount[j+1], _subscriptionAmount[j]);
                     (_validPuppets[j], _validPuppets[j+1]) = (_validPuppets[j+1], _validPuppets[j]);
                 }
             }
