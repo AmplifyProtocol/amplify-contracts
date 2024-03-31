@@ -327,13 +327,13 @@ contract GMXV2Reader is BaseReader {
     }
 
     function _getPositionFeesInfo(bytes32 _routeTypeKey, address _trader) public view returns (PositionInfo memory _info) {
-        // (address _route,) =  _getMarket(_routeTypeKey, _trader);
-        // bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
-        //(,address _market) =  _getMarket(_routeTypeKey, _trader);
+        (address _route,) =  _getMarket(_routeTypeKey, _trader);
+        bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
+        (,address _market) =  _getMarket(_routeTypeKey, _trader);
 
         // To measure results against ui on opened positon:
-        bytes32 _key = 0xa8ab5058c2aa1681effa619cff63b72896c129d255b72d258d0ebbaab0840dc3;
-        address _market = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; 
+        // bytes32 _key = 0xa8ab5058c2aa1681effa619cff63b72896c129d255b72d258d0ebbaab0840dc3;
+        // address _market = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; 
 
         Market.Props memory marketProps = reader.getMarket(gmxDataStore, _market);
 
