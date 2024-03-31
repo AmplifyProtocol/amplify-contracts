@@ -101,7 +101,7 @@ contract GMXV2Reader is BaseReader {
             fundingFee: _getAccruedFundingFee(_routeTypeKey, _trader),
             borrowFee: _positionFeesInfo.borrowingFeeUsd,
             priceImpact: _getPriceImpact(_routeTypeKey, _trader),
-            closeFee: _positionFeesInfo.closingFeeFactor * _position.sizeInUsd / 1e30
+            closeFee: _positionFeesInfo.closingFeeFactor * _position.sizeInUsd / _DENOMINATOR
          });
     }
 
@@ -225,7 +225,7 @@ contract GMXV2Reader is BaseReader {
         int256 fundingFactor = _gmxDataStore.getInt(GmxKeys.savedFundingFactorPerSecondKey(_market));
         
         longsPayShorts = fundingFactor > 0;
-        uint256 ratio = shortInterestUsd < longInterestUsd ? ((shortInterestUsd * 1e30 / longInterestUsd)) : ((longInterestUsd * 1e30 / shortInterestUsd));
+        uint256 ratio = shortInterestUsd < longInterestUsd ? ((shortInterestUsd * _DENOMINATOR / longInterestUsd)) : ((longInterestUsd * _DENOMINATOR / shortInterestUsd));
         int256 factorPerSecondB = (int256(ratio) * fundingFactor / 1e30);
         int256 factorPerSecondA = (int256(1e60 / ratio) * fundingFactor / 1e30);
         longFunding = longsPayShorts ? (-1) * factorPerSecondA : factorPerSecondB;
@@ -266,15 +266,15 @@ contract GMXV2Reader is BaseReader {
     }
 
     function _getAccruedFundingFee(bytes32 _routeTypeKey, address _trader) internal view returns (int256 _fundingFee) {
-        int256 _fundingFeeAmountPerSize = int256(_getFundingFeePerSize(_routeTypeKey, _trader));
+        uint256 _fundingFeeAmountPerSize = _getFundingFeePerSize(_routeTypeKey, _trader);
 
         PositionInfo memory _positonInfo = _getPositionFeesInfo(_routeTypeKey, _trader); 
-        int256 _latestFundingFeeAmountPerSize = int256(_positonInfo.latestFundingFeeAmountPerSize);
+        uint256 _latestFundingFeeAmountPerSize = _positonInfo.latestFundingFeeAmountPerSize;
         
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
         int256 _size = int256(_position.sizeInUsd);
 
-        int256 _fundingDiffFactor = _latestFundingFeeAmountPerSize - _fundingFeeAmountPerSize;
+        int256 _fundingDiffFactor = int256(_latestFundingFeeAmountPerSize) - int256(_fundingFeeAmountPerSize);
         return ((_size * _fundingDiffFactor )/ 1e30);
     }
 
@@ -288,7 +288,7 @@ contract GMXV2Reader is BaseReader {
     //     // Calculate the difference between the pool borrowing factor and the position borrowing factor
     //     uint256 _borrowingFactorDifference = _getBorrowingFeePoolFactor(_routeTypeKey,_trader) - positionProps.numbers.borrowingFactor;
         
-    //     return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference) / 1e30;
+    //     return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference) / _DENOMINATOR;
     // }
 
 

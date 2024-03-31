@@ -11,6 +11,7 @@ abstract contract BaseReader {
     IDataStore constant amplifyDataStore = IDataStore(0xcf269C855fDa1e8Ea65Ce51bea2208B400Df03d5);
     address _weth = address(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
     uint256 internal constant _BASIS_POINTS_DIVISOR = 10000;
+    uint256 internal constant _DENOMINATOR = 1e30;
 
 
     struct FeesAccrued {
