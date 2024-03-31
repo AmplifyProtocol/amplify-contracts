@@ -80,7 +80,7 @@ contract GMXV2ReaderTest is BaseGMXV2 {
         
         console.log("executionFeeDex: ", _fees.executionFeeDex);
         console.log("executionFeeAmplify: ", _fees.executionFeeAmplify);
-        console.log("fundingFee: ", _fees.fundingFee);
+        console.log("fundingFee: ", uint256(_fees.fundingFee));
         console.log("borrowFee: ", _fees.borrowFee);
         console.log("priceImpact: ", uint256(_fees.priceImpact));
         console.log("closeFee: ", _fees.closeFee);
@@ -135,15 +135,15 @@ contract GMXV2ReaderTest is BaseGMXV2 {
 
         // === ALTERNATIVE WAY TO GET FUNDING FEE ACCRUED === <- correct if multiply by 2
 
-        uint256 fundingFeeAmountPerSize = _reader._getFundingFeePerSize(_routeTypeKey, _trader);
-        uint256 latestFundingFeeAmountPerSize = positonInfo.latestFundingFeeAmountPerSize;
+        // uint256 fundingFeeAmountPerSize = _reader._getFundingFeePerSize(_routeTypeKey, _trader);
+        // uint256 latestFundingFeeAmountPerSize = positonInfo.latestFundingFeeAmountPerSize;
         
-        GMXV2Reader.PositionData memory _position = _reader.getPosition(_routeTypeKey, _trader);
-        uint256 size = _position.sizeInUsd;
+        // GMXV2Reader.PositionData memory _position = _reader.getPosition(_routeTypeKey, _trader);
+        // uint256 size = _position.sizeInUsd;
 
-        uint256 fundingDiffFactor = latestFundingFeeAmountPerSize - fundingFeeAmountPerSize;
-        uint256 fundingFee = size * fundingDiffFactor / 1e30;
-        console.log("FUNDING_FEE_USD_1E30: ", fundingFee); // correct amount: div 1e30 -> USD
+        // uint256 fundingDiffFactor = latestFundingFeeAmountPerSize - fundingFeeAmountPerSize;
+        // uint256 fundingFee = size * fundingDiffFactor / 1e30;
+        // console.log("FUNDING_FEE_USD_1E30: ", fundingFee); // correct amount: div 1e30 -> USD
 
         // const FLOAT_PRECISION_SQRT = 10n ** 15n
         // const fundingDiffFactor = latestFundingAmountPerSize - positionFundingAmountPerSize

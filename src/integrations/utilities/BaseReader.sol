@@ -16,7 +16,7 @@ abstract contract BaseReader {
     struct FeesAccrued {
         uint256 executionFeeDex;
         uint256 executionFeeAmplify;
-        uint256 fundingFee;
+        int256 fundingFee;
         uint256 borrowFee;
         int256 priceImpact;
         uint256 closeFee; 
