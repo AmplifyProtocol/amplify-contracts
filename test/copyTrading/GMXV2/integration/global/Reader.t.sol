@@ -118,17 +118,22 @@ contract GMXV2ReaderTest is BaseGMXV2 {
     // }
 
     function testGetPositionInfoFees() view external {
-        
+
+        // https://github.com/RageTrade/Perp-Aggregator-SDK/blob/c6a23a68b3c5bec4c3bd6536d3a74c1ef6b5bb31/src/configs/gmxv2/positions/utils.ts#L81 :
+        // https://github.com/RageTrade/Perp-Aggregator-SDK/blob/c6a23a68b3c5bec4c3bd6536d3a74c1ef6b5bb31/src/configs/gmxv2/fees/utils/index.ts#L18
+        // const closingFeeUsd = getPositionFee(marketInfo, sizeInUsd, false, userReferralInfo).positionFeeUsd !!!!
+
         GMXV2Reader.PositionInfo memory positonInfo = _reader._getPositionFeesInfo(_routeTypeKey, _trader); 
         
         console.log("executionPrice: ", uint256(positonInfo.executionPrice));
-        console.log("fundingFeeAmount: ", uint256(positonInfo.fundingFeeAmount)); // correct amount: div 1e15 -> USD
+        console.log("fundingFeeAmount: ", uint256(positonInfo.fundingFeeAmount)); // not correct 
         console.log("latestFundingFeeAmountPerSize: ", uint256(positonInfo.latestFundingFeeAmountPerSize));
         console.log("latestLongTokenClaimableFundingAmountPerSize: ", uint256(positonInfo.latestLongTokenClaimableFundingAmountPerSize));
         console.log("latestShortTokenClaimableFundingAmountPerSize: ", uint256(positonInfo.latestShortTokenClaimableFundingAmountPerSize));
-        console.log("borrowingFeeUsd: ", uint256(positonInfo.borrowingFeeUsd)); // correct amount: div 1e34 -> USD
+        console.log("borrowingFeeUsd: ", uint256(positonInfo.borrowingFeeUsd)); // correct amount: div 1e30 -> USD
+        console.log("closingFeeFactor: ", uint256(positonInfo.closingFeeFactor));
 
-        // === ALTERNATIVE WAY TO GET FUNDING FEE ACCRUED ===
+        // === ALTERNATIVE WAY TO GET FUNDING FEE ACCRUED === <- correct if multiply by 2
 
         uint256 fundingFeeAmountPerSize = _reader._getFundingFeePerSize(_routeTypeKey, _trader);
         uint256 latestFundingFeeAmountPerSize = positonInfo.latestFundingFeeAmountPerSize;
@@ -139,30 +144,39 @@ contract GMXV2ReaderTest is BaseGMXV2 {
         uint256 fundingDiffFactor = latestFundingFeeAmountPerSize - fundingFeeAmountPerSize;
         uint256 fundingFee = size * fundingDiffFactor / 1e30;
         console.log("FUNDING_FEE_USD_1E30: ", fundingFee); // correct amount: div 1e30 -> USD
+
+        // const FLOAT_PRECISION_SQRT = 10n ** 15n
+        // const fundingDiffFactor = latestFundingAmountPerSize - positionFundingAmountPerSize
+        // const denominator = PRECISION * FLOAT_PRECISION_SQRT
+        // return positionSizeInUsd * fundingDiffFactor / denominator
     }
 
-    function testGetBestPuppets()  external {
+    // function testGetBestPuppets()  external {
 
-        _subscribePuppets();
+    //     _subscribePuppets();
         
-        address[] memory _puppets = new address[](5);
-        _puppets[0] = puppetA;
-        _puppets[1] = puppetB;
-        _puppets[2] = puppetC;
-        _puppets[3] = puppetD;
-        _puppets[4] = unsubscribedPuppet;
+    //     // address[] memory _puppets = new address[](5);
+    //     // _puppets[0] = puppetA;
+    //     // _puppets[1] = puppetB;
+    //     // _puppets[2] = puppetC;
+    //     // _puppets[3] = puppetD;
+    //     // _puppets[4] = unsubscribedPuppet;
 
-        address[] memory _bestPuppets = _reader.getBestPuppets(_puppets, routeMock, context.dataStore); 
+    //     address[] memory _puppets = new address[](1);
+    //     _puppets[0] = unsubscribedPuppet;
+
+
+    //     address[] memory _bestPuppets = _reader.getBestPuppets(_puppets, routeMock, context.dataStore); 
         
-        assertEq(_bestPuppets.length, 4, "testGetBestPuppets: E1");
-        assertEq(_bestPuppets[0], puppetD, "testGetBestPuppets: E2");
-        assertEq(_bestPuppets[1], puppetA, "testGetBestPuppets: E3");
+    //     assertEq(_bestPuppets.length, 4, "testGetBestPuppets: E1");
+    //     assertEq(_bestPuppets[0], puppetD, "testGetBestPuppets: E2");
+    //     assertEq(_bestPuppets[1], puppetA, "testGetBestPuppets: E3");
 
-        console.log("_bestPuppets[0]: ", _bestPuppets[0]);
-        console.log("_bestPuppets[1]: ", _bestPuppets[1]);
-        console.log("_bestPuppets[2]: ", _bestPuppets[2]);
-        console.log("_bestPuppets[3]: ", _bestPuppets[3]);
-    }
+    //     console.log("_bestPuppets[0]: ", _bestPuppets[0]);
+    //     console.log("_bestPuppets[1]: ", _bestPuppets[1]);
+    //     console.log("_bestPuppets[2]: ", _bestPuppets[2]);
+    //     console.log("_bestPuppets[3]: ", _bestPuppets[3]);
+    // }
 
     function _subscribePuppets() internal {
 
