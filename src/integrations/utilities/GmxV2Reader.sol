@@ -96,13 +96,16 @@ contract GMXV2Reader is BaseReader {
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
         
         _fees = FeesAccrued({
-            executionFeeDex: CommonHelper.minExecutionFee(amplifyDataStore),
-            executionFeeAmplify: CommonHelper.minPuppetExecutionFee(amplifyDataStore),
             fundingFee: _getAccruedFundingFee(_routeTypeKey, _trader),
             borrowFee: _positionFeesInfo.borrowingFeeUsd,
             priceImpact: _getPriceImpact(_routeTypeKey, _trader),
             closeFee: _positionFeesInfo.closingFeeFactor * _position.sizeInUsd / _DENOMINATOR
          });
+    }
+
+    function getMinExecutionFees() override public view returns (uint256 minExecutionFee, uint256 minPuppetExecutionFee) {
+           return (CommonHelper.minExecutionFee(amplifyDataStore), CommonHelper.minPuppetExecutionFee(amplifyDataStore));
+            
     }
 
     function getFeesPerSecond(address _market) override public view returns (FeesRates memory _fees) {
@@ -134,24 +137,28 @@ contract GMXV2Reader is BaseReader {
             isLong: positionProps.flags.isLong
          });
     }
-
+    // event DataTest(address market, int256 fundingFee, uint256 borrowFee, uint256 closeFee, int256 maxNegativePriceImpactUsd, int256 priceImpactDeltaUsd, uint256 minCollateralFactor, int256 liquidationCollateralUsd);
     /// @notice https://github.com/RageTrade/Perp-Aggregator-SDK/blob/c6a23a68b3c5bec4c3bd6536d3a74c1ef6b5bb31/src/configs/gmxv2/positions/utils.ts#L46
-    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public view returns (int256 _liquidationPrice) {
+    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public  returns (int256 _liquidationPrice) {
 
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
         FeesAccrued memory _fees = getAccruedFees(_routeTypeKey, _trader);
         Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _position.market);
 
-        int256 totalPendingFeesUsd = _fees.fundingFee + int256(_fees.borrowFee) + int256(_fees.closeFee);
+        int256 totalPendingFeesUsd = _fees.fundingFee + int256(_fees.borrowFee/1e3) + int256(_fees.closeFee);
 
         int256 maxNegativePriceImpactUsd = (-1) * int256(_position.sizeInUsd * _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
+
+        // int256 maxNegativePriceImpactUsdTest = int256(_gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
 
         int256 priceImpactDeltaUsd = _getPriceImpactDeltaUsd(_fees.priceImpact, maxNegativePriceImpactUsd, true);
 
         uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market)); // This determines the minimum allowed ratio of (position collateral) / (position size)
-        int256 liquidationCollateralUsd = int256(_position.sizeInUsd * minCollateralFactor);
+        int256 liquidationCollateralUsd = int256(_position.sizeInUsd * minCollateralFactor /_DENOMINATOR);
 
-        int256 indexTokenDenominator = 1e18 ; //TODO: retrieve index token denominator
+        // emit DataTest(_position.market, _fees.fundingFee, _fees.borrowFee, _fees.closeFee, maxNegativePriceImpactUsdTest, priceImpactDeltaUsd, minCollateralFactor, liquidationCollateralUsd);
+
+        int256 indexTokenDenominator = int256(10 ** IERC20Metadata(_marketProps.indexToken).decimals());
 
         if (_position.collateralToken == _marketProps.indexToken) {
             if (_position.isLong) {

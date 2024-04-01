@@ -78,8 +78,6 @@ contract GMXV2ReaderTest is BaseGMXV2 {
         
         GMXV2Reader.FeesAccrued memory _fees = _reader.getAccruedFees(_routeTypeKey, _trader); 
         
-        console.log("executionFeeDex: ", _fees.executionFeeDex);
-        console.log("executionFeeAmplify: ", _fees.executionFeeAmplify);
         console.log("fundingFee: ", uint256(_fees.fundingFee));
         console.log("borrowFee: ", _fees.borrowFee);
         console.log("priceImpact: ", uint256(_fees.priceImpact));
@@ -101,23 +99,23 @@ contract GMXV2ReaderTest is BaseGMXV2 {
         }
     }
 
-    // function testGetLiquidationPrice() view external {
+    function testGetLiquidationPrice() external {
         
-    //     int256 _liquidationPrice = _reader.getLiquidationPrice(_routeTypeKey, _trader); 
+        int256 _liquidationPrice = _reader.getLiquidationPrice(_routeTypeKey, _trader); 
         
-    //     console.log("liquidationPrice: ", uint256(_liquidationPrice));
-    // }
+        console.log("liquidationPrice: ", uint256(_liquidationPrice));
+    }
 
     function testGetPositionInfoFees() view external {
 
         GMXV2Reader.PositionInfo memory positonInfo = _reader._getPositionFeesInfo(_routeTypeKey, _trader); 
         
         console.log("executionPrice: ", uint256(positonInfo.executionPrice));
-        console.log("fundingFeeAmount: ", uint256(positonInfo.fundingFeeAmount)); // not correct 
+        console.log("fundingFeeAmount: ", uint256(positonInfo.fundingFeeAmount)); 
         console.log("latestFundingFeeAmountPerSize: ", uint256(positonInfo.latestFundingFeeAmountPerSize));
         console.log("latestLongTokenClaimableFundingAmountPerSize: ", uint256(positonInfo.latestLongTokenClaimableFundingAmountPerSize));
         console.log("latestShortTokenClaimableFundingAmountPerSize: ", uint256(positonInfo.latestShortTokenClaimableFundingAmountPerSize));
-        console.log("borrowingFeeUsd: ", uint256(positonInfo.borrowingFeeUsd)); // correct amount: div 1e30 -> USD
+        console.log("borrowingFeeUsd: ", uint256(positonInfo.borrowingFeeUsd)); 
         console.log("closingFeeFactor: ", uint256(positonInfo.closingFeeFactor));
     }
 
