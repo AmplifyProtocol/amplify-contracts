@@ -138,23 +138,23 @@ contract GMXV2Reader is BaseReader {
             fundingFeePerSize: positionProps.numbers.fundingFeeAmountPerSize
          });
     }
-    // event DataTest1(address market, int256 fundingFee, uint256 borrowFee, uint256 closeFee, int256 maxNegativePriceImpactUsd, int256 _priceImpactDeltaUsd, int256 minCollateralFactor, int256 _liquidationCollateralUsd);
+    event DataTest1(address market, int256 fundingFee, uint256 borrowFee, uint256 closeFee, int256 maxNegativePriceImpactUsd, int256 _priceImpactDeltaUsd, int256 minCollateralFactor, int256 _liquidationCollateralUsd);
     /// @notice https://github.com/RageTrade/Perp-Aggregator-SDK/blob/c6a23a68b3c5bec4c3bd6536d3a74c1ef6b5bb31/src/configs/gmxv2/positions/utils.ts#L46
-    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public view returns (int256 _liquidationPrice) {
+    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public  returns (int256 _liquidationPrice) {
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
         Fees memory _fees = getFees(_routeTypeKey, _trader);
         Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _position.market);
 
-        int256 _totalPendingFeesUsd = _fees.fundingFee + int256(_fees.borrowFee) + int256(_fees.closeFee);
+        int256 _totalPendingFeesUsd = _fees.fundingFee + int256(_fees.borrowFee + _fees.closeFee);
 
         int256 _maxNegativePriceImpactUsd = (-1) * int256(_position.sizeInUsd * _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
 
-        int256 _priceImpactDeltaUsd = _get_priceImpactDeltaUsd(_fees.priceImpact, _maxNegativePriceImpactUsd, true);
+        int256 _priceImpactDeltaUsd = _getPriceImpactDeltaUsd(_fees.priceImpact, _maxNegativePriceImpactUsd, true);
 
         int256 _minCollateralFactor = int256(_gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market))); // This determines the minimum allowed ratio of (position collateral) / (position size)
         int256 _liquidationCollateralUsd = Precision.applyFactor(_position.sizeInUsd, _minCollateralFactor);
 
-        // emit DataTest1(_position.market, _fees.fundingFee, _fees.borrowFee, _fees.closeFee, _maxNegativePriceImpactUsd, _priceImpactDeltaUsd, _minCollateralFactor, _liquidationCollateralUsd);
+        emit DataTest1(_position.market, _fees.fundingFee, _fees.borrowFee, _fees.closeFee, _maxNegativePriceImpactUsd, _priceImpactDeltaUsd, _minCollateralFactor, _liquidationCollateralUsd);
 
         int256 _indexTokenDenominator = int256(10 ** IERC20Metadata(_marketProps.indexToken).decimals());
 
@@ -240,10 +240,10 @@ contract GMXV2Reader is BaseReader {
     /// @notice https://github.com/sherlock-audit/2023-02-gmx/blob/b8f926738d1e2f4ec1173939caa51698f2c89631/gmx-synthetics/contracts/market/MarketUtils.sol#L1232C5-L1246C6
     function _getFundingFee(bytes32 _routeTypeKey, address _trader) internal view returns (int256) {
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
-
         uint256 _fundingFeeAmountPerSize = _position.fundingFeePerSize;
         uint256 _latestFundingAmountPerSize = _gmxDataStore.getUint(GmxKeys.fundingFeeAmountPerSizeKey(_position.market, _position.collateralToken, _position.isLong));
-        int256 _fundingDiffFactor = int256(_latestFundingAmountPerSize) - int256(_fundingFeeAmountPerSize);
+        
+        int256 _fundingDiffFactor = int256(_latestFundingAmountPerSize - _fundingFeeAmountPerSize);
 
         return Precision.applyFactor(_position.sizeInUsd, _fundingDiffFactor);
     }
@@ -288,7 +288,7 @@ contract GMXV2Reader is BaseReader {
         return _executionPrice.priceImpactUsd;
     }
 
-    function _get_priceImpactDeltaUsd(int256 priceImpact, int256 maxNegativePriceImpactUsd, bool useMaxPriceImpact) internal pure returns(int256 _priceImpactDeltaUsd){
+    function _getPriceImpactDeltaUsd(int256 priceImpact, int256 maxNegativePriceImpactUsd, bool useMaxPriceImpact) internal pure returns(int256 _priceImpactDeltaUsd){
         if (useMaxPriceImpact) {
             _priceImpactDeltaUsd = maxNegativePriceImpactUsd;
         } else {
