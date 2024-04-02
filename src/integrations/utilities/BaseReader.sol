@@ -14,7 +14,7 @@ abstract contract BaseReader {
     uint256 internal constant _DENOMINATOR = 1e30;
 
 
-    struct FeesAccrued {
+    struct Fees {
         int256 fundingFee;
         uint256 borrowFee;
         int256 priceImpact;
@@ -51,7 +51,7 @@ abstract contract BaseReader {
     // executionFee (from our datastore)
     // fundingFee/borrowFee per second/hour from GMX
     // priceImpact not sure how this goes, need to look into
-    function getFees(bytes32 _routeTypeKey, address _trader) virtual public view returns (FeesAccrued memory _fees);
+    function getFees(bytes32 _routeTypeKey, address _trader) virtual public view returns (Fees memory _fees);
 
     function getMinExecutionFees() virtual public view returns (uint256 minExecutionFee, uint256 minPuppetExecutionFee);
 

@@ -18,7 +18,6 @@ pragma solidity 0.8.23;
 import {GMXV2Keys} from "src/integrations/GMXV2/libraries/GMXV2Keys.sol";
 import {GMXV2OrchestratorHelper} from "src/integrations/GMXV2/libraries/GMXV2OrchestratorHelper.sol";
 import {IGMXV2Reader, Market, Price, MarketPoolValueInfo, Position, MarketUtils, ReaderUtils, GmxKeys, ReaderPricingUtils, IReferralStorage, Precision} from "src/integrations/utilities/interfaces/IGmxV2Reader.sol";
-
 import {DataStore} from "src/integrations/utilities/DataStore.sol";
 import "./BaseReader.sol";
 
@@ -50,16 +49,16 @@ contract GMXV2Reader is BaseReader {
     }
 
     function getAvailableLiquidity(address _market) public view returns (uint256, uint256) {
-        Market.Props memory marketProps = reader.getMarket(gmxDataStore, _market);
+        Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _market);
 
-        uint256 _longTokenAmount = _gmxDataStore.getUint(GmxKeys.poolAmountKey(_market, marketProps.longToken));
-        uint256 _shortTokenAmount = _gmxDataStore.getUint(GmxKeys.poolAmountKey(_market, marketProps.shortToken));
+        uint256 _longTokenAmount = _gmxDataStore.getUint(GmxKeys.poolAmountKey(_market, _marketProps.longToken));
+        uint256 _shortTokenAmount = _gmxDataStore.getUint(GmxKeys.poolAmountKey(_market, _marketProps.shortToken));
 
-        uint256 _longTokenPrice = getPrice(marketProps.longToken);
-        uint256 _shortTokenPrice = getPrice(marketProps.shortToken);
+        uint256 _longTokenPrice = getPrice(_marketProps.longToken);
+        uint256 _shortTokenPrice = getPrice(_marketProps.shortToken);
 
-        uint256 _longTokenUsd = _longTokenAmount * _longTokenPrice / (10 ** IERC20Metadata(marketProps.longToken).decimals());
-        uint256 _shortTokenUsd = _shortTokenAmount * _shortTokenPrice/ (10 ** IERC20Metadata(marketProps.shortToken).decimals());
+        uint256 _longTokenUsd = _longTokenAmount * _longTokenPrice / (10 ** IERC20Metadata(_marketProps.longToken).decimals());
+        uint256 _shortTokenUsd = _shortTokenAmount * _shortTokenPrice/ (10 ** IERC20Metadata(_marketProps.shortToken).decimals());
 
         return (_longTokenUsd, _shortTokenUsd);
     }
@@ -70,12 +69,12 @@ contract GMXV2Reader is BaseReader {
     }
 
     function getOpenInterest(address _market) public view returns (OpenInterest memory _openInterest) {
-        Market.Props memory marketProps = reader.getMarket(gmxDataStore, _market);
+        Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _market);
 
-        uint256 _shortTokenLongOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(_market, marketProps.shortToken, true));
-        uint256 _shortTokenShortOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(_market, marketProps.shortToken, false));
-        uint256 _longTokenLongOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(_market, marketProps.longToken, true));
-        uint256 _longTokenShortOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(_market, marketProps.longToken, false));
+        uint256 _shortTokenLongOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(_market, _marketProps.shortToken, true));
+        uint256 _shortTokenShortOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(_market, _marketProps.shortToken, false));
+        uint256 _longTokenLongOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(_market, _marketProps.longToken, true));
+        uint256 _longTokenShortOI = _gmxDataStore.getUint(GmxKeys.openInterestKey(_market, _marketProps.longToken, false));
         uint256 _maxOpenInterestLong = _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(_market, true));
         uint256 _maxOpenInterestShort = _gmxDataStore.getUint(GmxKeys.maxOpenInterestKey(_market, false));
 
@@ -91,11 +90,11 @@ contract GMXV2Reader is BaseReader {
         return GMXV2OrchestratorHelper.getPrice(amplifyDataStore, _token);
     }
 
-    function getFees(bytes32 _routeTypeKey, address _trader) override public view returns (FeesAccrued memory _fees) {
+    function getFees(bytes32 _routeTypeKey, address _trader) override public view returns (Fees memory _fees) {
         PositionInfo memory _positionFeesInfo = _getPositionFeesInfo(_routeTypeKey, _trader);
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
         
-        _fees = FeesAccrued({
+        _fees = Fees({
             fundingFee: _getFundingFee(_routeTypeKey, _trader),
             borrowFee: _getBorrowingFees(_routeTypeKey, _trader),
             priceImpact: _getPriceImpact(_routeTypeKey, _trader),
@@ -139,12 +138,11 @@ contract GMXV2Reader is BaseReader {
             fundingFeePerSize: positionProps.numbers.fundingFeeAmountPerSize
          });
     }
-    event DataTest1(address market, int256 fundingFee, uint256 borrowFee, uint256 closeFee, int256 maxNegativePriceImpactUsd, int256 _priceImpactDeltaUsd, int256 minCollateralFactor, int256 _liquidationCollateralUsd);
+    // event DataTest1(address market, int256 fundingFee, uint256 borrowFee, uint256 closeFee, int256 maxNegativePriceImpactUsd, int256 _priceImpactDeltaUsd, int256 minCollateralFactor, int256 _liquidationCollateralUsd);
     /// @notice https://github.com/RageTrade/Perp-Aggregator-SDK/blob/c6a23a68b3c5bec4c3bd6536d3a74c1ef6b5bb31/src/configs/gmxv2/positions/utils.ts#L46
-    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public  returns (int256 _liquidationPrice) {
-
+    function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public view returns (int256 _liquidationPrice) {
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
-        FeesAccrued memory _fees = getFees(_routeTypeKey, _trader);
+        Fees memory _fees = getFees(_routeTypeKey, _trader);
         Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _position.market);
 
         int256 _totalPendingFeesUsd = _fees.fundingFee + int256(_fees.borrowFee) + int256(_fees.closeFee);
@@ -156,7 +154,7 @@ contract GMXV2Reader is BaseReader {
         int256 _minCollateralFactor = int256(_gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market))); // This determines the minimum allowed ratio of (position collateral) / (position size)
         int256 _liquidationCollateralUsd = Precision.applyFactor(_position.sizeInUsd, _minCollateralFactor);
 
-        emit DataTest1(_position.market, _fees.fundingFee, _fees.borrowFee, _fees.closeFee, _maxNegativePriceImpactUsd, _priceImpactDeltaUsd, _minCollateralFactor, _liquidationCollateralUsd);
+        // emit DataTest1(_position.market, _fees.fundingFee, _fees.borrowFee, _fees.closeFee, _maxNegativePriceImpactUsd, _priceImpactDeltaUsd, _minCollateralFactor, _liquidationCollateralUsd);
 
         int256 _indexTokenDenominator = int256(10 ** IERC20Metadata(_marketProps.indexToken).decimals());
 
@@ -199,20 +197,20 @@ contract GMXV2Reader is BaseReader {
     }
 
     function _getBorrowingFeesPerSecond(address _market) internal view returns (uint256 borrowingFactorPerSecondForLongs, uint256 borrowingFactorPerSecondForShorts) {
-        Market.Props memory marketProps = reader.getMarket(gmxDataStore, _market);
+        Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _market);
 
-        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
-        uint256 longTokenPrice = getPrice(marketProps.longToken);
-        uint256 shortTokenPrice = getPrice(marketProps.shortToken);
+        uint256 indexTokenPrice = getPrice(_marketProps.indexToken);
+        uint256 longTokenPrice = getPrice(_marketProps.longToken);
+        uint256 shortTokenPrice = getPrice(_marketProps.shortToken);
 
-        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
-        Price.Props memory longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
-        Price.Props memory shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
+        Price.Props memory _indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
+        Price.Props memory _longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
+        Price.Props memory _shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
 
         MarketUtils.MarketPrices memory prices = MarketUtils.MarketPrices({
-            indexTokenPrice: indexTokenPriceProps,
-            longTokenPrice: longTokenPriceProps,
-            shortTokenPrice: shortTokenPriceProps
+            indexTokenPrice: _indexTokenPriceProps,
+            longTokenPrice: _longTokenPriceProps,
+            shortTokenPrice: _shortTokenPriceProps
             });
 
         ReaderUtils.MarketInfo memory marketInfo= reader.getMarketInfo(
@@ -224,7 +222,6 @@ contract GMXV2Reader is BaseReader {
     }
 
     function _getFundingFeesPerSecond(address _market) internal view returns (bool longsPayShorts, int256 longFunding, int256 shortFunding) {
-
         OpenInterest memory _interest = getOpenInterest(_market);
         uint256 longInterestUsd = _interest.longOI;
         uint256 shortInterestUsd = _interest.shortOI;
@@ -241,7 +238,6 @@ contract GMXV2Reader is BaseReader {
 
     /// @notice https://github.com/nissoh/gmx-middleware/blob/f81e968a4c2f8401e420314596fe4c66db59ec60/utils/src/position.ts#L66
     /// @notice https://github.com/sherlock-audit/2023-02-gmx/blob/b8f926738d1e2f4ec1173939caa51698f2c89631/gmx-synthetics/contracts/market/MarketUtils.sol#L1232C5-L1246C6
-
     function _getFundingFee(bytes32 _routeTypeKey, address _trader) internal view returns (int256) {
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
 
@@ -275,14 +271,14 @@ contract GMXV2Reader is BaseReader {
     function _getPriceImpact(bytes32 _routeTypeKey, address _trader) internal view returns (int256) { 
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
 
-        Market.Props memory marketProps = reader.getMarket(gmxDataStore, _position.market);
-        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
-        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
+        Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _position.market);
+        uint256 indexTokenPrice = getPrice(_marketProps.indexToken);
+        Price.Props memory _indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
 
         ReaderPricingUtils.ExecutionPriceResult memory _executionPrice = reader.getExecutionPrice(
             gmxDataStore, 
             _position.market, 
-            indexTokenPriceProps, 
+            _indexTokenPriceProps, 
             _position.sizeInUsd, 
             _position.sizeInTokens,  
             int256(_position.sizeInUsd) * (-1), //position size delta
@@ -293,7 +289,6 @@ contract GMXV2Reader is BaseReader {
     }
 
     function _get_priceImpactDeltaUsd(int256 priceImpact, int256 maxNegativePriceImpactUsd, bool useMaxPriceImpact) internal pure returns(int256 _priceImpactDeltaUsd){
-        
         if (useMaxPriceImpact) {
             _priceImpactDeltaUsd = maxNegativePriceImpactUsd;
         } else {
@@ -315,20 +310,20 @@ contract GMXV2Reader is BaseReader {
         // bytes32 _key = 0xa8ab5058c2aa1681effa619cff63b72896c129d255b72d258d0ebbaab0840dc3;
         // address _market = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; 
 
-        Market.Props memory marketProps = reader.getMarket(gmxDataStore, _market);
+        Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _market);
 
-        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
-        uint256 longTokenPrice = getPrice(marketProps.longToken);
-        uint256 shortTokenPrice = getPrice(marketProps.shortToken);
+        uint256 indexTokenPrice = getPrice(_marketProps.indexToken);
+        uint256 longTokenPrice = getPrice(_marketProps.longToken);
+        uint256 shortTokenPrice = getPrice(_marketProps.shortToken);
 
-        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
-        Price.Props memory longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
-        Price.Props memory shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
+        Price.Props memory _indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
+        Price.Props memory _longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
+        Price.Props memory _shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
 
         MarketUtils.MarketPrices memory prices = MarketUtils.MarketPrices({
-            indexTokenPrice: indexTokenPriceProps,
-            longTokenPrice: longTokenPriceProps,
-            shortTokenPrice: shortTokenPriceProps
+            indexTokenPrice: _indexTokenPriceProps,
+            longTokenPrice: _longTokenPriceProps,
+            shortTokenPrice: _shortTokenPriceProps
             });
 
         PositionData memory _position = getPosition(_routeTypeKey, _trader);
