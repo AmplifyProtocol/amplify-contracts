@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.23;
 
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/math/SignedMath.sol";
 
 // borrowing fees for position require only a borrowingFactor to track
 // an example on how this works is if the global cumulativeBorrowingFactor is 10020%
@@ -433,6 +436,8 @@ library GmxKeys {
     bytes32 public constant MAX_POOL_AMOUNT = keccak256(abi.encode("MAX_POOL_AMOUNT"));
     // @dev key for max pool amount for deposit
     bytes32 public constant MAX_POOL_AMOUNT_FOR_DEPOSIT = keccak256(abi.encode("MAX_POOL_AMOUNT_FOR_DEPOSIT"));
+    // @dev key for cumulative borrowing factor
+    bytes32 public constant CUMULATIVE_BORROWING_FACTOR = keccak256(abi.encode("CUMULATIVE_BORROWING_FACTOR"));
     
     // @dev the key for the max open interest
     // @param market the market for the pool
@@ -532,7 +537,69 @@ library GmxKeys {
         ));
     }
 
+    // @dev key for cumulative borrowing factor
+    // @param market the market to check
+    // @param isLong whether to get the key for the long or short side
+    // @return key for cumulative borrowing factor
+    function cumulativeBorrowingFactorKey(address market, bool isLong) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            CUMULATIVE_BORROWING_FACTOR,
+            market,
+            isLong
+        ));
+    }
+
     
+}
+
+library Precision {
+    using SafeCast for uint256;
+    using SignedMath for int256;
+
+    uint256 public constant FLOAT_PRECISION = 10 ** 30;
+    uint256 public constant WEI_PRECISION = 10 ** 18;
+    uint256 public constant BASIS_POINTS_DIVISOR = 10000;
+
+    uint256 public constant FLOAT_TO_WEI_DIVISOR = 10 ** 12;
+
+    uint256 public constant SCALING_FACTOR_TO_AVOID_OVERFLOW = 10 ** 20;
+    uint256 public constant FLOAT_PRECISION_AFTER_SCALING_FACTOR = FLOAT_PRECISION / SCALING_FACTOR_TO_AVOID_OVERFLOW;
+
+    /**
+     * Applies the given factor to the given value and returns the result.
+     *
+     * @param value The value to apply the factor to.
+     * @param factor The factor to apply.
+     * @return The result of applying the factor to the value.
+     */
+    function applyFactor(uint256 value, uint256 factor) public pure returns (uint256) {
+        (bool ok, uint256 numerator) = Math.tryMul(value, factor);
+        if (ok) {
+            return numerator / FLOAT_PRECISION;
+        }
+
+        // if ok is false, the multiplication overflowed, attempt the multiplication
+        // with reduced values
+
+        // assign the larger value to a and the smaller value to b
+        (uint256 a, uint256 b) = value > factor ? (value, factor) : (factor, value);
+
+        // for an overflow to occur, "a" must be more than 10^38
+        // reduce "a" to allow larger values to be handled
+        return ((a / SCALING_FACTOR_TO_AVOID_OVERFLOW) * b) / FLOAT_PRECISION_AFTER_SCALING_FACTOR;
+    }
+
+    /**
+     * Applies the given factor to the given value and returns the result.
+     *
+     * @param value The value to apply the factor to.
+     * @param factor The factor to apply.
+     * @return The result of applying the factor to the value.
+     */
+    function applyFactor(uint256 value, int256 factor) public pure returns (int256) {
+        uint256 result = applyFactor(value, factor.abs());
+        return factor > 0 ? result.toInt256() : -result.toInt256();
+    }
 }
 
 interface IReferralStorage {

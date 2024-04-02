@@ -17,7 +17,7 @@ pragma solidity 0.8.23;
 
 import {GMXV2Keys} from "src/integrations/GMXV2/libraries/GMXV2Keys.sol";
 import {GMXV2OrchestratorHelper} from "src/integrations/GMXV2/libraries/GMXV2OrchestratorHelper.sol";
-import {IGMXV2Reader, Market, Price, MarketPoolValueInfo, Position, MarketUtils, ReaderUtils, GmxKeys, ReaderPricingUtils, IReferralStorage} from "src/integrations/utilities/interfaces/IGmxV2Reader.sol";
+import {IGMXV2Reader, Market, Price, MarketPoolValueInfo, Position, MarketUtils, ReaderUtils, GmxKeys, ReaderPricingUtils, IReferralStorage, Precision} from "src/integrations/utilities/interfaces/IGmxV2Reader.sol";
 
 import {DataStore} from "src/integrations/utilities/DataStore.sol";
 import "./BaseReader.sol";
@@ -97,7 +97,7 @@ contract GMXV2Reader is BaseReader {
         
         _fees = FeesAccrued({
             fundingFee: _getAccruedFundingFee(_routeTypeKey, _trader),
-            borrowFee: _positionFeesInfo.borrowingFeeUsd,
+            borrowFee: _getBorrowingFees(_routeTypeKey, _trader),//_positionFeesInfo.borrowingFeeUsd,
             priceImpact: _getPriceImpact(_routeTypeKey, _trader),
             closeFee: _positionFeesInfo.closingFeeFactor * _position.sizeInUsd / _DENOMINATOR
          });
@@ -134,10 +134,11 @@ contract GMXV2Reader is BaseReader {
             collateralAmount: positionProps.numbers.collateralAmount,
             market: positionProps.addresses.market,
             collateralToken: positionProps.addresses.collateralToken,
-            isLong: positionProps.flags.isLong
+            isLong: positionProps.flags.isLong,
+            borrowingFactor: positionProps.numbers.borrowingFactor
          });
     }
-    // event DataTest(address market, int256 fundingFee, uint256 borrowFee, uint256 closeFee, int256 maxNegativePriceImpactUsd, int256 priceImpactDeltaUsd, uint256 minCollateralFactor, int256 liquidationCollateralUsd);
+    event DataTest(address market, int256 fundingFee, uint256 borrowFee, uint256 closeFee, int256 maxNegativePriceImpactUsd, int256 priceImpactDeltaUsd, uint256 minCollateralFactor, int256 liquidationCollateralUsd);
     /// @notice https://github.com/RageTrade/Perp-Aggregator-SDK/blob/c6a23a68b3c5bec4c3bd6536d3a74c1ef6b5bb31/src/configs/gmxv2/positions/utils.ts#L46
     function getLiquidationPrice(bytes32 _routeTypeKey, address _trader) public  returns (int256 _liquidationPrice) {
 
@@ -145,18 +146,16 @@ contract GMXV2Reader is BaseReader {
         FeesAccrued memory _fees = getAccruedFees(_routeTypeKey, _trader);
         Market.Props memory _marketProps = reader.getMarket(gmxDataStore, _position.market);
 
-        int256 totalPendingFeesUsd = _fees.fundingFee + int256(_fees.borrowFee/1e3) + int256(_fees.closeFee);
+        int256 totalPendingFeesUsd = _fees.fundingFee + int256(_fees.borrowFee) + int256(_fees.closeFee);
 
         int256 maxNegativePriceImpactUsd = (-1) * int256(_position.sizeInUsd * _gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
-
-        // int256 maxNegativePriceImpactUsdTest = int256(_gmxDataStore.getUint(GmxKeys.maxPositionImpactFactorForLiquidationsKey(_position.market)));
 
         int256 priceImpactDeltaUsd = _getPriceImpactDeltaUsd(_fees.priceImpact, maxNegativePriceImpactUsd, true);
 
         uint256 minCollateralFactor = _gmxDataStore.getUint(GmxKeys.minCollateralFactorKey(_position.market)); // This determines the minimum allowed ratio of (position collateral) / (position size)
         int256 liquidationCollateralUsd = int256(_position.sizeInUsd * minCollateralFactor /_DENOMINATOR);
 
-        // emit DataTest(_position.market, _fees.fundingFee, _fees.borrowFee, _fees.closeFee, maxNegativePriceImpactUsdTest, priceImpactDeltaUsd, minCollateralFactor, liquidationCollateralUsd);
+        emit DataTest(_position.market, _fees.fundingFee, _fees.borrowFee, _fees.closeFee, maxNegativePriceImpactUsd, priceImpactDeltaUsd, minCollateralFactor, liquidationCollateralUsd);
 
         int256 indexTokenDenominator = int256(10 ** IERC20Metadata(_marketProps.indexToken).decimals());
 
@@ -239,32 +238,6 @@ contract GMXV2Reader is BaseReader {
         shortFunding = longsPayShorts ? factorPerSecondB : (-1) * factorPerSecondA;
     }
 
-
-    function _getBorrowingFeePoolFactor(bytes32 _routeTypeKey, address _trader) internal view returns (uint256 _borrowingFeePoolFactor) {
-        (,address market) =  _getMarket(_routeTypeKey, _trader);
-
-        Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
-
-        uint256 indexTokenPrice = getPrice(marketProps.indexToken);
-        uint256 longTokenPrice = getPrice(marketProps.longToken);
-        uint256 shortTokenPrice = getPrice(marketProps.shortToken);
-
-        Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
-        Price.Props memory longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
-        Price.Props memory shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
-
-        (,MarketPoolValueInfo.Props memory marketValueProp) = reader.getMarketTokenPrice(
-            gmxDataStore,
-            marketProps,
-            indexTokenPriceProps,
-            longTokenPriceProps,
-            shortTokenPriceProps,
-            keccak256(abi.encode("MAX_PNL_FACTOR")),
-            true
-        );
-        return marketValueProp.borrowingFeePoolFactor;
-    }
-
     function _getFundingFeePerSize(bytes32 _routeTypeKey, address _trader) internal view returns (uint256) {
         (address _route,) =  _getMarket(_routeTypeKey, _trader);
         bytes32 _key = GMXV2OrchestratorHelper.positionKey(amplifyDataStore, _route);
@@ -272,6 +245,7 @@ contract GMXV2Reader is BaseReader {
         return positionProps.numbers.fundingFeeAmountPerSize;
     }
 
+    /// @notice https://github.com/nissoh/gmx-middleware/blob/f81e968a4c2f8401e420314596fe4c66db59ec60/utils/src/position.ts#L66
     function _getAccruedFundingFee(bytes32 _routeTypeKey, address _trader) internal view returns (int256 _fundingFee) {
         uint256 _fundingFeeAmountPerSize = _getFundingFeePerSize(_routeTypeKey, _trader);
 
@@ -283,6 +257,35 @@ contract GMXV2Reader is BaseReader {
 
         int256 _fundingDiffFactor = int256(_latestFundingFeeAmountPerSize) - int256(_fundingFeeAmountPerSize);
         return ((_size * _fundingDiffFactor )/ 1e30);
+    }
+
+    /// @notice https://github.com/sherlock-audit/2023-02-gmx/blob/b8f926738d1e2f4ec1173939caa51698f2c89631/gmx-synthetics/contracts/market/MarketUtils.sol#L1232C5-L1246C6
+
+    /// @param latestFundingAmountPerSize the latest funding amount per size
+    /// @param positionFundingAmountPerSize the funding amount per size for the position
+    /// @param positionSizeInUsd the position size in USD
+    /// @return (hasPendingFundingFee, fundingFeeAmount)
+    function _getFundingFeeAmount(
+        int256 latestFundingAmountPerSize,
+        int256 positionFundingAmountPerSize,
+        uint256 positionSizeInUsd
+    ) internal pure returns (bool, int256) {
+        int256 fundingDiffFactor = (latestFundingAmountPerSize - positionFundingAmountPerSize);
+        int256 amount = Precision.applyFactor(positionSizeInUsd, fundingDiffFactor);
+
+        return (fundingDiffFactor != 0 && amount == 0, amount);
+    }
+
+    /// @return the borrowing fees for a position
+    function _getBorrowingFees(bytes32 _routeTypeKey, address _trader) internal view returns (uint256) {
+        PositionData memory _position = getPosition(_routeTypeKey, _trader);
+        uint256 _cumulativeBorrowingFactor = _gmxDataStore.getUint(GmxKeys.cumulativeBorrowingFactorKey(_position.market, _position.isLong));
+        
+        if (_position.borrowingFactor > _cumulativeBorrowingFactor) {
+            revert UnexpectedBorrowingFactor();
+        }
+        uint256 _diffFactor = _cumulativeBorrowingFactor - _position.borrowingFactor;
+        return Precision.applyFactor(_position.sizeInUsd, _diffFactor);
     }
 
     // function _getAccruedBorrowingFee(bytes32 _routeTypeKey, address _trader) internal view returns (uint256 _borrowingFees) {
@@ -298,6 +301,30 @@ contract GMXV2Reader is BaseReader {
     //     return (positionProps.numbers.sizeInUsd * _borrowingFactorDifference) / _DENOMINATOR;
     // }
 
+    // function _getBorrowingFeePoolFactor(bytes32 _routeTypeKey, address _trader) internal view returns (uint256 _borrowingFeePoolFactor) {
+    //     (,address market) =  _getMarket(_routeTypeKey, _trader);
+
+    //     Market.Props memory marketProps = reader.getMarket(gmxDataStore, market);
+
+    //     uint256 indexTokenPrice = getPrice(marketProps.indexToken);
+    //     uint256 longTokenPrice = getPrice(marketProps.longToken);
+    //     uint256 shortTokenPrice = getPrice(marketProps.shortToken);
+
+    //     Price.Props memory indexTokenPriceProps = Price.Props({min: indexTokenPrice, max: indexTokenPrice});
+    //     Price.Props memory longTokenPriceProps = Price.Props({min: longTokenPrice, max: longTokenPrice});
+    //     Price.Props memory shortTokenPriceProps = Price.Props({min: shortTokenPrice,max: shortTokenPrice});
+
+    //     (,MarketPoolValueInfo.Props memory marketValueProp) = reader.getMarketTokenPrice(
+    //         gmxDataStore,
+    //         marketProps,
+    //         indexTokenPriceProps,
+    //         longTokenPriceProps,
+    //         shortTokenPriceProps,
+    //         keccak256(abi.encode("MAX_PNL_FACTOR")),
+    //         true
+    //     );
+    //     return marketValueProp.borrowingFeePoolFactor;
+    // }
 
     function _getPriceImpact(bytes32 _routeTypeKey, address _trader) internal view returns (int256) { 
         PositionData memory _position = getPosition(_routeTypeKey, _trader);

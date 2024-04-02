@@ -35,6 +35,7 @@ abstract contract BaseReader {
         address market;
         address collateralToken;
         bool isLong;
+        uint256 borrowingFactor;
     }
 
     struct OpenInterest {
@@ -148,4 +149,5 @@ abstract contract BaseReader {
     // ============================================================================================
 
     error NoValidPuppets();
+    error UnexpectedBorrowingFactor();
 }
