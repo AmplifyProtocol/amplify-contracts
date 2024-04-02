@@ -36,6 +36,7 @@ abstract contract BaseReader {
         address collateralToken;
         bool isLong;
         uint256 borrowingFactor;
+        uint256 fundingFeePerSize;
     }
 
     struct OpenInterest {
@@ -50,7 +51,7 @@ abstract contract BaseReader {
     // executionFee (from our datastore)
     // fundingFee/borrowFee per second/hour from GMX
     // priceImpact not sure how this goes, need to look into
-    function getAccruedFees(bytes32 _routeTypeKey, address _trader) virtual public view returns (FeesAccrued memory _fees);
+    function getFees(bytes32 _routeTypeKey, address _trader) virtual public view returns (FeesAccrued memory _fees);
 
     function getMinExecutionFees() virtual public view returns (uint256 minExecutionFee, uint256 minPuppetExecutionFee);
 

@@ -438,6 +438,10 @@ library GmxKeys {
     bytes32 public constant MAX_POOL_AMOUNT_FOR_DEPOSIT = keccak256(abi.encode("MAX_POOL_AMOUNT_FOR_DEPOSIT"));
     // @dev key for cumulative borrowing factor
     bytes32 public constant CUMULATIVE_BORROWING_FACTOR = keccak256(abi.encode("CUMULATIVE_BORROWING_FACTOR"));
+    // @dev key for funding fee amount per size
+    bytes32 public constant FUNDING_FEE_AMOUNT_PER_SIZE = keccak256(abi.encode("FUNDING_FEE_AMOUNT_PER_SIZE"));
+    // @dev key for claimable funding amount per size
+    bytes32 public constant CLAIMABLE_FUNDING_AMOUNT_PER_SIZE = keccak256(abi.encode("CLAIMABLE_FUNDING_AMOUNT_PER_SIZE"));
     
     // @dev the key for the max open interest
     // @param market the market for the pool
@@ -549,7 +553,33 @@ library GmxKeys {
         ));
     }
 
-    
+    // @dev key for funding fee amount per size
+    // @param market the market to check
+    // @param collateralToken the collateralToken to get the key for
+    // @param isLong whether to get the key for the long or short side
+    // @return key for funding fee amount per size
+    function fundingFeeAmountPerSizeKey(address market, address collateralToken, bool isLong) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            FUNDING_FEE_AMOUNT_PER_SIZE,
+            market,
+            collateralToken,
+            isLong
+        ));
+    }
+
+    // @dev key for claimabel funding amount per size
+    // @param market the market to check
+    // @param collateralToken the collateralToken to get the key for
+    // @param isLong whether to get the key for the long or short side
+    // @return key for claimable funding amount per size
+    function claimableFundingAmountPerSizeKey(address market, address collateralToken, bool isLong) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            CLAIMABLE_FUNDING_AMOUNT_PER_SIZE,
+            market,
+            collateralToken,
+            isLong
+        ));
+    }
 }
 
 library Precision {
