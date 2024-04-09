@@ -7,7 +7,7 @@ import {IGMXReader, IGMXDataStore, IGMXMarket, IGMXPosition} from "../../../../.
 
 import "./BaseMock.sol";
 
-contract ReaderMock is BaseMock, IGMXReader {
+contract ReaderMock is BaseMock {
 
     uint256 public size;
     uint256 public collateral;
@@ -16,7 +16,7 @@ contract ReaderMock is BaseMock, IGMXReader {
         return IGMXReader(_gmxV2Reader).getMarketBySalt(_gmxV2DataStore, _salt);
     }
 
-    function getPosition(IGMXDataStore, bytes32) external view override returns (IGMXPosition.Props memory _position) {
+    function getPosition(IGMXDataStore, bytes32) external view returns (IGMXPosition.Props memory _position) {
         _position.numbers.sizeInUsd = size;
         _position.numbers.collateralAmount = collateral;
     }
