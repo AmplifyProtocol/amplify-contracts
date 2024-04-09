@@ -102,7 +102,7 @@ library GMXV2RouteHelper {
 
     function isOpenInterest(IDataStore _dataStore) external view returns (bool) {
         bytes32 _positionKey = IBaseOrchestrator(_dataStore.getAddress(Keys.ORCHESTRATOR)).positionKey(address(this));
-        IGMXPosition.Props memory _position = IGMXReader(_dataStore.getAddress(GMXV2Keys.GMX_READER)).getPosition(gmxDataStore(_dataStore), _positionKey);
+        IGMXPosition.Props memory _position = IGMXReader(_dataStore.getAddress(GMXV2Keys.GMX_READER)).getPosition(address(gmxDataStore(_dataStore)), _positionKey);
         return _position.numbers.sizeInUsd > 0 || _position.numbers.collateralAmount > 0;
     }
 

@@ -94,7 +94,7 @@ library GMXV2OrchestratorHelper {
 
     function positionAmounts(IDataStore _dataStore, address _route) external view returns (uint256 _size, uint256 _collateral) {
         IGMXPosition.Props memory _position = gmxReader(_dataStore).getPosition(
-                gmxDataStore(_dataStore), positionKey(_dataStore, _route)
+                address(gmxDataStore(_dataStore)), positionKey(_dataStore, _route)
         );
 
         _size = _position.numbers.sizeInUsd; // already in USD with 30 decimals

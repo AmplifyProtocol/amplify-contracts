@@ -17,19 +17,27 @@ pragma solidity 0.8.23;
 
 interface IReader {
 
-    struct Fees {
+    struct MarketFees {
+        FundingFee fundingFee;
+        uint256 borrowFee;
         uint256 dexExecutionFee;
         uint256 amplifyExecutionFee;
-        uint256 fundingFee;
-        uint256 borrowFee;
+    }
+
+    struct PositionFees {
         uint256 priceImpact;
         uint256 openFee;
         uint256 closeFee;
     }
 
+    struct FundingFee {
+        bool longsPayShorts;
+        uint256 amount;
+    }
+
     // Market Data
 
-    function getFees(bytes32 _routeTypeKey) external view returns (Fees memory _fees);
+    function getMarketFees(bytes32 _routeTypeKey) external view returns (MarketFees memory _fees);
     // function getAvailableLiquidity(bytes32 _routeTypeKey) external view returns (uint256 _availableLiquidity);
     // function getOpenInterest(bytes32 _routeTypeKey) external view returns (uint256 _longIO, uint256 _shortIO);
     // function getPrice(address _token) external view returns (uint256 _price);

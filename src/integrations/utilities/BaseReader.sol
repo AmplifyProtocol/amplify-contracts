@@ -15,9 +15,10 @@ abstract contract BaseReader is IReader {
         dataStore = DataStore(_dataStore);
     }
 
-    function getFees(bytes32 _routeTypeKey) virtual external view returns (Fees memory _fees);
+    function getMarketFees(bytes32 _routeTypeKey) virtual external view returns (MarketFees memory _fees);
     // function getAvailableLiquidity(bytes32 _routeTypeKey) virtual external view returns (uint256 _availableLiquidity);
     // function getOpenInterest(bytes32 _routeTypeKey) virtual external view returns (uint256 _longIO, uint256 _shortIO);
     // function getPrice(address _token) virtual external view returns (uint256 _price);
+    // function getPositionFees returns PositionFees
 
 }
